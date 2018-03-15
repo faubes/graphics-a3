@@ -56,6 +56,8 @@
 #define NOMINMAXS
 #ifndef _WIN32
 #define JOELAPTOP
+#else
+#define GLM_ENABLE_EXPERIMENTAL
 #endif
 
 #include <cstdlib>

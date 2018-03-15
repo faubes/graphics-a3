@@ -29,9 +29,9 @@
 //
 //
 // ==========================================================================
-#ifndef CSI4130_SPHERE_SHAPE_H_
-#define CSI4130_SPHERE_SHAPE_H_
-
+#ifndef CSI4130_RENDER_SHAPE_H_
+#define CSI4130_RENDER_SHAPE_H_
+#define GLM_ENABLE_EXPERIMENTAL
 
 #include <vector>
 

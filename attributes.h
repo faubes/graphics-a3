@@ -21,6 +21,7 @@
 // ==========================================================================
 #ifndef CSI4130_ATTRIBUTES_H_
 #define CSI4130_ATTRIBUTES_H_
+#define GLM_ENABLE_EXPERIMENTAL
 
 #include <cassert>
 #include <cstdlib> // Needed in windows for rand

@@ -92,7 +92,7 @@ void Attributes::createTransforms(glm::vec3 _minP, glm::vec3 _maxP) {
     // Now normalize
     randVec *= 1.0f/sqrt(len2);
     // random angle -pi .. pi
-    float angle = static_cast<float>(M_PI * ( 2.0 * randomUnit() -  1.0 ));
+    float angle = static_cast<float>(glm::pi<float>() * ( 2.0 * randomUnit() -  1.0 ));
     d_tfms[i] = glm::rotate( angle, randVec );
     // Add a random vector scaled upto the viewing volume
     randVec.x = (randomUnit()-0.5f) * volume.x;
