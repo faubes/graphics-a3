@@ -270,6 +270,7 @@ Torus::Torus() : RenderShape() {
 void Torus::reshape(GLfloat r_o, GLfloat r_i, GLushort n_o, GLushort n_i) {
         d_vertex.clear();
         d_index.clear();
+		d_normal.clear();
         for (int i = 0; i < n_o; i++) {
                 for (int j = 0; j < n_i; j++) {
                         GLfloat alpha = 2*i*glm::pi<float>() / n_i;
@@ -278,6 +279,22 @@ void Torus::reshape(GLfloat r_o, GLfloat r_i, GLushort n_o, GLushort n_i) {
                         GLfloat y = (r_o + r_i*glm::cos(alpha))*glm::sin(beta);
                         GLfloat z = (r_i*glm::sin(alpha));
                         d_vertex.insert(d_vertex.cend(), { x, y, z });
+
+						// calculate normal vector
+						// using formulas from 
+						// http://web.cs.ucdavis.edu/~amenta/s12/findnorm.pdf
+						
+						/* tangent vector with respect to big circle */
+						glm::vec3 t = glm::vec3(-glm::sin(beta), glm::cos(beta), 0.0f);
+						/* tangent vector with respect to little circle */
+						glm::vec3 s = glm::vec3(cos(beta)*(-sin(alpha)), sin(beta)*(-sin(alpha)), cos(alpha));
+						/* normal is cross-product of tangents */
+						glm::vec3 n = glm::normalize(glm::cross(s, t));
+						/* normalize normal */						
+						d_normal.insert(d_normal.cend(), {n.x, n.y, n.z});
+
+						// calculate neighbours for new points to add triangle (quad) indices
+
                         GLushort a = i*n_i + j;
                         GLushort b = i*n_i + ((j+1) % n_o);
                         GLushort c = ((i+1) % n_o)*n_i + j;

@@ -57,7 +57,7 @@ class RenderShape : public Shape, public Attributes {
   GLushort d_restart = 0xFFFF; //-32768;
   // Vertex coordinates
   std::vector<GLfloat> d_vertex;
-	std::vector<GLfloat> d_normal;
+  std::vector<GLfloat> d_normal;
   std::vector<GLushort> d_index;
   // direct specification with all faces unrolled
   std::vector<GLfloat> d_vertex_direct;

@@ -42,6 +42,20 @@ Sphere::Sphere() : RenderShape() {
 	0.5257311f, 0.0f, -0.8506508f, 
 	-0.5257311f, 0.0f, -0.8506508f
 	});
+  d_normal.insert(d_normal.end(), {
+	  0.0f, 0.8506508f, 0.5257311f,
+	  0.0f, 0.8506508f, -0.5257311f,
+	  0.0f, -0.8506508f, 0.5257311f,
+	  0.0f, -0.8506508f, -0.5257311f,
+	  0.8506508f, 0.5257311f, 0.0f,
+	  0.8506508f, -0.5257311f, 0.0f,
+	  -0.8506508f, 0.5257311f, 0.0f,
+	  -0.8506508f, -0.5257311f, 0.0f,
+	  0.5257311f, 0.0f, 0.8506508f,
+	  -0.5257311f, 0.0f, 0.8506508f,
+	  0.5257311f, 0.0f, -0.8506508f,
+	  -0.5257311f, 0.0f, -0.8506508f
+  });
   // 20 faces
   d_index.insert(d_index.end(), {
     1, 0, 4, 
@@ -104,21 +118,14 @@ Sphere::Sphere(Sphere & _s) : RenderShape() {
 		d_vertex.insert(d_vertex.cend(), *it);
 	}
 
+	// copy over normals
+	for (auto it = _s.d_vertex.cbegin(); it != _s.d_vertex.cend(); ++it) {
+		d_normal.insert(d_normal.cend(), *it);
+	}
+
 	int old_vertex_count = _s.getNPoints() / 3; // divide by 3 since each point has 3 coordinates and getNPoints() returns # of floats
 	int vertex_count = old_vertex_count;
 
-	// how many new points? n choose 2?
-	// for each pair of points in _s, 1 new mid point
-	// no. only add new midpoint between adjacent pairs
-	// icosahedron is regular of degree 3
-	// handhsake lemma
-	// sum_1^N deg(G) = 2 |E|
-	// sum_1^N 3 = 2 E
-	// E = 3N/2
-	// so 3N/2 new points created (one for each edge)
-	// if the shape assumed 3-regular
-	// after this process, though, each vertex doubles in degree?
-	// calculation only works once. Need to know level of recursion
 	int new_vertex_count = vertex_count + (3 * vertex_count) / 2;
 
 	// keep track of indices for each midpoint in symmetric matrix
@@ -156,6 +163,7 @@ Sphere::Sphere(Sphere & _s) : RenderShape() {
 			mid *= 0.5;
 			mid = glm::normalize(mid);
 			d_vertex.insert(d_vertex.end(), { mid.x, mid.y, mid.z });
+			d_normal.insert(d_normal.end(), { mid.x, mid.y, mid.z });
 			m[p1][p2] = vertex_count;
 			m[p2][p1] = vertex_count;
 #ifdef JOEDEBUG2
@@ -163,13 +171,13 @@ Sphere::Sphere(Sphere & _s) : RenderShape() {
 #endif
 			++vertex_count;
 		}
-		//glm::vec3 v1v2 = new_s.getVertex(m[p1][p2]);
 
 		if (m[p1][p3] == 0) {		
 			glm::vec3 mid = v1 + v3;
 			mid *= 0.5;
 			mid = glm::normalize(mid);
 			d_vertex.insert(d_vertex.end(), { mid.x, mid.y, mid.z });
+			d_normal.insert(d_normal.end(), { mid.x, mid.y, mid.z });
 			m[p1][p3] = vertex_count;
 			m[p3][p1] = vertex_count;
 			++vertex_count;
@@ -178,13 +186,13 @@ Sphere::Sphere(Sphere & _s) : RenderShape() {
 #endif
 
 		}
-		//glm::vec3 v1v3 = new_s.getVertex(m[p1][p3]);
 
 		if (m[p2][p3] == 0) {
 			glm::vec3 mid = v2 + v3;
 			mid *= 0.5;
 			mid = glm::normalize(mid);
 			d_vertex.insert(d_vertex.end(), { mid.x, mid.y, mid.z });
+			d_normal.insert(d_normal.end(), { mid.x, mid.y, mid.z });
 			m[p2][p3] = vertex_count;
 			m[p3][p2] = vertex_count;
 			++vertex_count;
@@ -193,7 +201,6 @@ Sphere::Sphere(Sphere & _s) : RenderShape() {
 #endif
 
 		}
-		//glm::vec3 v2v3 = new_s.getVertex(m[p2][p3]);
 
 		// create new triangles
 
@@ -258,28 +265,9 @@ Sphere::Sphere(Sphere & _s) : RenderShape() {
 // transform in place
 void Sphere::subdivide() {
 
-	// copy over existing points 
-	//for (auto it = _s.d_vertex.cbegin(); it != _s.d_vertex.cend(); ++it) {
-	//	d_vertex.insert(d_vertex.cend(), *it);
-	//}
-
 	int old_vertex_count = getNPoints() / 3; // divide by 3 since each point has 3 coordinates and getNPoints() returns # of floats
 	int vertex_count = old_vertex_count;
 	std::vector<GLushort> new_d_index;
-
-	// how many new points? n choose 2?
-	// for each pair of points in _s, 1 new mid point
-	// no. only add new midpoint between adjacent pairs
-	// icosahedron is regular of degree 3
-	// handhsake lemma
-	// sum_1^N deg(G) = 2 |E|
-	// sum_1^N 3 = 2 E
-	// E = 3N/2
-	// so 3N/2 new points created (one for each edge)
-	// if the shape assumed 3-regular
-	// after this process, though, each vertex doubles in degree?
-	// calculation only works once. Need to know level of recursion
-	//int new_vertex_count = vertex_count + (3 * vertex_count) / 2;
 
 	// keep track of indices for each midpoint in symmetric matrix
 	// where M[i][j] = index of vertex between i and j = M[j][i]
@@ -316,6 +304,7 @@ void Sphere::subdivide() {
 			mid *= 0.5;
 			mid = glm::normalize(mid);
 			d_vertex.insert(d_vertex.end(), { mid.x, mid.y, mid.z });
+			d_normal.insert(d_normal.end(), { mid.x, mid.y, mid.z });
 			m[p1][p2] = vertex_count;
 			m[p2][p1] = vertex_count;
 #ifdef JOEDEBUG2
@@ -323,13 +312,13 @@ void Sphere::subdivide() {
 #endif
 			++vertex_count;
 		}
-		//glm::vec3 v1v2 = new_s.getVertex(m[p1][p2]);
 
 		if (m[p1][p3] == 0) {
 			glm::vec3 mid = v1 + v3;
 			mid *= 0.5;
 			mid = glm::normalize(mid);
 			d_vertex.insert(d_vertex.end(), { mid.x, mid.y, mid.z });
+			d_normal.insert(d_normal.end(), { mid.x, mid.y, mid.z });
 			m[p1][p3] = vertex_count;
 			m[p3][p1] = vertex_count;
 			++vertex_count;
@@ -338,13 +327,13 @@ void Sphere::subdivide() {
 #endif
 
 		}
-		//glm::vec3 v1v3 = new_s.getVertex(m[p1][p3]);
 
 		if (m[p2][p3] == 0) {
 			glm::vec3 mid = v2 + v3;
 			mid *= 0.5;
 			mid = glm::normalize(mid);
 			d_vertex.insert(d_vertex.end(), { mid.x, mid.y, mid.z });
+			d_normal.insert(d_normal.end(), { mid.x, mid.y, mid.z });
 			m[p2][p3] = vertex_count;
 			m[p3][p2] = vertex_count;
 			++vertex_count;
@@ -353,7 +342,6 @@ void Sphere::subdivide() {
 #endif
 
 		}
-		//glm::vec3 v2v3 = new_s.getVertex(m[p2][p3]);
 
 		// create new triangles
 
@@ -418,14 +406,3 @@ void Sphere::subdivide() {
 	delete[] m;
 
 }
-/*
-Sphere& Sphere::subdivide(Sphere &_s, int n) {
-	assert(n >= 0);
-	if (n == 0) {
-		return _s;
-	}
-	else {
-		return subdivide(Sphere(_s), n - 1);
-	}
-}
-*/
