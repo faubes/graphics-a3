@@ -84,7 +84,8 @@
 #include "box_shape.h"
 #include "light.h"
 #include "material.h"
-
+#include "sphere.h"
+#include "torus.h"
 using namespace CSI4130;
 using std::cerr;
 using std::endl;
@@ -138,8 +139,17 @@ struct ControlParameter {
 /** Global variables */
 const int g_numBoxes = 24;
 BoxShape g_boxShape;
-GLuint g_ebo;
-GLuint g_vao;
+const int g_numSpheres = 12;
+Sphere g_sphereShape;
+const int g_numTorus = 12;
+Sphere g_torusShape;
+
+GLuint g_box_ebo;
+GLuint g_box_vao;
+GLuint g_sphere_ebo;
+GLuint g_sphere_vao; 
+GLuint g_torus_ebo;
+GLuint g_torus_vao;
 GLuint g_program;
 Transformations g_tfm;
 Attributes g_attrib;
@@ -242,17 +252,18 @@ void init(void)
         g_tfm.locP = glGetUniformLocation( g_program, "ProjectionMatrix");
         errorOut();
 
-        // Element array buffer object
-        glGenBuffers(1, &g_ebo);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, g_ebo );
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                     sizeof(GLushort) * g_boxShape.getNIndices(),
-                     g_boxShape.getIndicies(), GL_STATIC_DRAW );
-        errorOut();
 
         // Generate a VAO
-        glGenVertexArrays(1, &g_vao );
-        glBindVertexArray( g_vao );
+        glGenVertexArrays(1, &g_box_vao );
+        glBindVertexArray( g_box_vao );
+
+		// Element array buffer object
+		glGenBuffers(1, &g_box_ebo);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, g_box_ebo);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+			sizeof(GLushort) * g_boxShape.getNIndices(),
+			g_boxShape.getIndicies(), GL_STATIC_DRAW);
+		errorOut();
 
         GLuint vbo;
         glGenBuffers( 1, &vbo );
@@ -397,8 +408,8 @@ void display(void)
         // Update uniform for this drawing
         glUniformMatrix4fv(g_tfm.locVM, 1, GL_FALSE, glm::value_ptr(ModelView));
         // VAO is still bound - to be clear bind again
-        glBindVertexArray(g_vao);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,g_ebo);
+        glBindVertexArray(g_box_vao);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, g_box_ebo);
         glEnable(GL_PRIMITIVE_RESTART);
         glPrimitiveRestartIndex(g_boxShape.getRestart());
         glDrawElementsInstanced(GL_TRIANGLE_STRIP, g_boxShape.getNIndices(),

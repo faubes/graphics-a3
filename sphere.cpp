@@ -42,6 +42,7 @@ Sphere::Sphere() : RenderShape() {
 	0.5257311f, 0.0f, -0.8506508f, 
 	-0.5257311f, 0.0f, -0.8506508f
 	});
+  // vertex points == normal vectors (for unit sphere)
   d_normal.insert(d_normal.end(), {
 	  0.0f, 0.8506508f, 0.5257311f,
 	  0.0f, 0.8506508f, -0.5257311f,
