@@ -11,7 +11,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODUL_PATH} "${CMAKE_SOURCE_DIR}/../cmake/Modules/
 message("Module path: ${CMAKE_MODULE_PATH}")
 
 # define the project name
-set(project_name "lit_boxes")
+set(project_name "lit_objects")
 project("${project_name}")
 
 # display the project name when cmake is run
@@ -21,7 +21,7 @@ message("Project source dir: ${PROJECT_SOURCE_DIR}")
 # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x -fpermissive")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
 
-add_executable(${project_name} box_shape.cpp sphere.cpp torus.cpp attributes.cpp lit_spheres.cpp ../common/shader.cpp)
+add_executable(${project_name} box_shape.cpp sphere.cpp torus.cpp attributes.cpp lit_objects.cpp ../common/shader.cpp)
 
 
 # include boiler plate

@@ -59,7 +59,7 @@ uniform vec4 lightPosition[2];
 out vec4 colorVertFrag; // Pass the color on to rasterization
 out vec3 normalFrag; // Pass the normal to rasterization
 out vec3 eyeFrag; // Pass an eye vector along
-out vec3 lightFrag; // Pass a light vector along
+out vec3 lightFrag[2]; // Pass light vectors along
 flat out int materialId; // depending on instance send material id along 
 
 void main() {
@@ -74,9 +74,9 @@ void main() {
   // light vector in camera coordinates
   // Check for directional lighting	
   if ( lightPosition[0].w > 0.0 ) {
-    lightFrag = lightPosition[0].xyz - posVec.xyz;
+    lightFrag[0] = lightPosition[0].xyz - posVec.xyz;
   } else {
-    lightFrag = lightPosition[0].xyz;
+    lightFrag[0] = lightPosition[0].xyz;
   }
 
   // assume Modelview matrix has no non-uniform scaling or shearing 

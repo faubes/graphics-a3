@@ -65,6 +65,9 @@ namespace CSI4130 {
 
 // Use an array of uniform struct for light source
 struct LightSource {
+	typedef glm::vec4 vec4;
+	typedef glm::vec3 vec3;
+
   glm::vec4 d_ambient;
   glm::vec4 d_diffuse;
   glm::vec4 d_specular;
@@ -86,8 +89,11 @@ struct LightSource {
 
   // default ctor
   LightSource() : d_ambient( 0.0f, 0.0f, 0.0f, 1.0f ), 
-    d_diffuse( 1.0f, 1.0f, 1.0f, 1.0f ),
-    d_specular( 1.0f, 1.0f, 1.0f, 1.0f ), 
+	  // turn first light down for testing
+	  d_diffuse(0.01f, 0.01f, 0.01f, 0.01f),
+	  d_specular(0.01f, 0.01f, 0.01f, 0.01f),
+	//d_diffuse( 1.0f, 1.0f, 1.0f, 1.0f ),
+    //d_specular( 1.0f, 1.0f, 1.0f, 1.0f ), 
     d_pointLight( true ),
     d_spot_direction( 0.0f, 0.0f, -1.0f ),
     d_spot_exponent(0),
@@ -96,11 +102,36 @@ struct LightSource {
     d_linear_attenuation(0.0f),
     d_quadratic_attenuation(0.0f),
     d_position( 0.0f, 0.0f, 0.0f, 0.0f ) {}
+
+  // verbose ctor
+  LightSource(vec4 _ambient, 
+	  vec4 _diffuse, 
+	  vec4 _specular, 
+	  bool _pointLight, 
+	  vec3 _spot_dir,
+	  GLfloat _spot_exponent, 
+	  GLfloat _spot_cutoff, 
+	  GLfloat _a1, 
+	  GLfloat _a2, 
+	  GLfloat _a3, 
+	  vec4 _pos ) 
+	  : d_ambient(_ambient),
+	  d_diffuse(_diffuse),
+	  d_specular(_specular),
+	  d_pointLight(_pointLight),
+	  d_spot_direction(_spot_dir),
+	  d_spot_exponent(_spot_exponent),
+	  d_spot_cutoff(_spot_cutoff),
+	  d_constant_attenuation(_a1),
+	  d_linear_attenuation(_a2),
+	  d_quadratic_attenuation(_a3),
+	  d_position(_pos) {}
+
 };
 
 
 class LightArray {
-
+  const static int STRIDE = 26;
   std::vector<LightSource> d_lights;
     
 public:
@@ -167,15 +198,16 @@ public:
   }
 
   void setLights( GLuint program ) {
-    int maxLight = d_lights.size();
+    size_t maxLight = d_lights.size();
     for ( int l=0; l<maxLight; ++l )  {
       setLight(program, l );
     }
     return;
   }
 
+
   void setPositions( GLuint program ) {
-    int maxLight = d_lights.size();
+    size_t maxLight = d_lights.size();
     std::string varName("lights[");
     for ( int l=0; l<maxLight; ++l )  {
       setPosition(program, l );
@@ -183,6 +215,23 @@ public:
     return;
   }
 
+  // still under development?
+  void setLightsUBO(GLuint _ubo) {
+	  glBindBuffer(GL_UNIFORM_BUFFER, _ubo);
+	  // We will send our data one material at a time
+	  int lId = 0;
+	  // cerr <<  "Overall size: " << STRIDE * d_materials.size() << endl;
+	  for (std::vector<LightSource>::const_iterator iter = d_lights.begin();
+		  iter != d_lights.end(); ++iter) {
+		  LightSource l = *iter;
+		  // cerr << "Offset: " << lId*STRIDE*sizeof(float) << " Size: " << sizeof(LightSource) << endl;
+		  glBufferSubData(GL_UNIFORM_BUFFER, lId * STRIDE * sizeof(float), sizeof(LightSource), reinterpret_cast<const GLvoid*>(&l));
+		  ++lId;
+		  errorOut();
+	  }
+	  // glBindBuffer(GL_UNIFORM_BUFFER, 0);
+	  return;
+  }
 };
 
 

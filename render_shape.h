@@ -111,7 +111,7 @@ Attributes( _nColors, _nTfms, _minP, _maxP ) {
 }
 
 int RenderShape::getNPoints() const {
-  return d_vertex.size();
+  return static_cast<int>(d_vertex.size());
 }
 
 
@@ -128,7 +128,7 @@ glm::vec3 RenderShape::getNormal( int _num ) const {
 
 
 int RenderShape::getNIndices() const {
-  return d_index.size();
+  return static_cast<int>(d_index.size());
 }
 
 GLushort RenderShape::getIndex( int _num ) const {
@@ -159,7 +159,7 @@ const GLfloat* RenderShape::getVertexDirect() const {
 
 
 int RenderShape::getNTriangles() const {
-  return d_vertex_direct.size()/3/3; // d_nTriangles and number of coords;
+  return static_cast<int>(d_vertex_direct.size()/3/3); // d_nTriangles and number of coords;
 }
 
 int RenderShape::getNColors() const {

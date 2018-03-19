@@ -45,7 +45,7 @@
 in vec4 colorVertFrag; 
 in vec3 normalFrag; 
 in vec3 eyeFrag; 
-in vec3 lightFrag; 
+in vec3 lightFrag[2]; 
 flat in int materialId;
 
 out vec4 color;
@@ -85,10 +85,10 @@ uniform LightSource lights[2];
 
 void main() {
   vec3 NVec = normalize(normalFrag);
-  vec3 LVec = normalize(lightFrag);
+  vec3 LVec = normalize(lightFrag[0]);
   vec3 EVec = normalize(eyeFrag);
 
-  float distanceLight = length(lightFrag.xyz);
+  float distanceLight = length(lightFrag[0].xyz);
 
   float attenuation = 1.0 / 
     (lights[0].constant_attenuation +

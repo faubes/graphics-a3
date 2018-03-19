@@ -90,7 +90,7 @@ using namespace CSI4130;
 using std::cerr;
 using std::endl;
 
-#define UNIFORM
+// #define UNIFORM
 
 namespace CSI4130 {
 
@@ -137,19 +137,19 @@ struct ControlParameter {
 };
 
 /** Global variables */
-const int g_numBoxes = 24;
-BoxShape g_boxShape;
-const int g_numSpheres = 12;
+// const int g_numBoxes = 24;
+// BoxShape g_boxShape;
+const int g_numSpheres = 32;
 Sphere g_sphereShape;
-const int g_numTorus = 12;
-Sphere g_torusShape;
+// const int g_numTorus = 12;
+// Sphere g_torusShape;
 
-GLuint g_box_ebo;
-GLuint g_box_vao;
+//GLuint g_box_ebo;
+//GLuint g_box_vao;
 GLuint g_sphere_ebo;
 GLuint g_sphere_vao; 
-GLuint g_torus_ebo;
-GLuint g_torus_vao;
+//GLuint g_torus_ebo;
+//GLuint g_torus_vao;
 GLuint g_program;
 Transformations g_tfm;
 Attributes g_attrib;
@@ -169,19 +169,19 @@ void initMaterial() {
         mat.d_specular = glm::vec4(0.3f, 0.3f, 0.3f, 1.0f);
         mat.d_shininess = 32.0f;
         g_matArray.append( mat );
-        // material 1 - turquise?
+        // material 1 - turquoise
         mat.d_ambient = glm::vec4(0.02f, 0.05f, 0.04f, 1.0f);
         mat.d_diffuse = glm::vec4(0.2f, 0.5f, 0.4f, 1.0f);
         mat.d_specular = glm::vec4(0.3f, 0.4f, 0.35f, 1.0f);
         mat.d_shininess = 12.5f;
         g_matArray.append( mat );
-        // material 2 - ruby?
+        // material 2 - ruby
         mat.d_ambient = glm::vec4(0.06f, 0.005f, 0.005f, 1.0f);
         mat.d_diffuse = glm::vec4(0.6f, 0.05f, 0.05f, 1.0f);
         mat.d_specular = glm::vec4(0.35f, 0.2f, 0.2f, 1.0f);
         mat.d_shininess = 76.5f;
         g_matArray.append( mat );
-        // material 3 - jade?
+        // material 3 - jade
         mat.d_ambient = glm::vec4(0.035f, 0.045f, 0.04f, 1.0f);
         mat.d_diffuse = glm::vec4(0.35f, 0.45f, 0.4f, 1.0f);
         mat.d_specular = glm::vec4(0.3f, 0.3f, 0.3f, 1.0f);
@@ -192,10 +192,26 @@ void initMaterial() {
 
 
 void initLight( int _nLights ) {
-        for ( int i=0; i<_nLights; ++i ) {
-                g_lightArray.append( LightSource() );
-        }
-        return;
+   
+	// light 0 is controllable default
+    g_lightArray.append( LightSource() );
+
+	// a directional light source from the center of the upper-left edge of the viewing volume
+	LightSource l1 = LightSource(
+		glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), // ambient
+		glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), // diffuse
+		glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), // specular
+		0,  // pointlight?
+		glm::vec3(0.0f),  // spot direction not used here
+		(GLfloat)1.0f, // spot exponent
+		(GLfloat)0.0f,  // cutoff
+		(GLfloat)0.2f, //a1
+		(GLfloat)0.35f, //a2 attenuation constants
+		(GLfloat)0.4f, //a3
+		glm::vec4(1.0f, 1.0f, 1.0f, 0.0f)); // z=0 for direction light
+	
+	g_lightArray.append(l1);
+	return;
 }
 
 
@@ -222,12 +238,12 @@ void init(void)
         vector<GLuint> sHandles;
         GLuint handle;
         Shader boxes;
-        if ( !boxes.load("lit_boxes.vs", GL_VERTEX_SHADER )) {
+        if ( !boxes.load("lit_boxes_sol.vs", GL_VERTEX_SHADER )) {
                 boxes.installShader( handle, GL_VERTEX_SHADER );
                 Shader::compile( handle );
                 sHandles.push_back( handle );
         }
-        if ( !boxes.load("lit_boxes.fs", GL_FRAGMENT_SHADER )) {
+        if ( !boxes.load("lit_boxes_sol.fs", GL_FRAGMENT_SHADER )) {
                 boxes.installShader( handle, GL_FRAGMENT_SHADER );
                 Shader::compile( handle );
                 sHandles.push_back( handle );
@@ -252,17 +268,21 @@ void init(void)
         g_tfm.locP = glGetUniformLocation( g_program, "ProjectionMatrix");
         errorOut();
 
+		// make spheres prettier
+		for (int i = 0; i < 3; ++i) {
+			g_sphereShape.subdivide();
+		}
 
         // Generate a VAO
-        glGenVertexArrays(1, &g_box_vao );
-        glBindVertexArray( g_box_vao );
+        glGenVertexArrays(1, &g_sphere_vao );
+        glBindVertexArray( g_sphere_vao );
 
 		// Element array buffer object
-		glGenBuffers(1, &g_box_ebo);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, g_box_ebo);
+		glGenBuffers(1, &g_sphere_ebo);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, g_sphere_ebo);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-			sizeof(GLushort) * g_boxShape.getNIndices(),
-			g_boxShape.getIndicies(), GL_STATIC_DRAW);
+			sizeof(GLushort) * g_sphereShape.getNIndices(),
+			g_sphereShape.getIndicies(), GL_STATIC_DRAW);
 		errorOut();
 
         GLuint vbo;
@@ -270,8 +290,8 @@ void init(void)
         errorOut();
         glBindBuffer(GL_ARRAY_BUFFER, vbo );
         glBufferData(GL_ARRAY_BUFFER,
-                     sizeof(GLfloat) * 3 * g_boxShape.getNPoints(),
-                     g_boxShape.getVertices(), GL_STATIC_DRAW);
+                     sizeof(GLfloat) * 3 * g_sphereShape.getNPoints(),
+                     g_sphereShape.getVertices(), GL_STATIC_DRAW);
         // pointer into the array of vertices which is now in the VAO
         glVertexAttribPointer(g_attrib.locPos, 3, GL_FLOAT, GL_FALSE, 0, 0 );
         glEnableVertexAttribArray(g_attrib.locPos);
@@ -284,8 +304,8 @@ void init(void)
                 errorOut();
                 glBindBuffer(GL_ARRAY_BUFFER, nbo );
                 glBufferData(GL_ARRAY_BUFFER,
-                             sizeof(GLfloat) * 3 * g_boxShape.getNPoints(),
-                             g_boxShape.getNormals(), GL_STATIC_DRAW);
+                             sizeof(GLfloat) * 3 * g_sphereShape.getNPoints(),
+                             g_sphereShape.getNormals(), GL_STATIC_DRAW);
                 // pointer into the array of vertices which is now in the VAO
                 glVertexAttribPointer(g_attrib.locNorm, 3, GL_FLOAT, GL_FALSE, 0, 0 );
                 glEnableVertexAttribArray(g_attrib.locNorm);
@@ -293,12 +313,12 @@ void init(void)
         }
         // Color buffer
         if ( g_attrib.locColor >= 0 ) {
-                g_boxShape.updateColors(g_numBoxes); // ensure that we have enough colors
+                g_sphereShape.updateColors(g_numSpheres); // ensure that we have enough colors
                 GLuint cbo;
                 glGenBuffers(1, &cbo);
                 glBindBuffer(GL_ARRAY_BUFFER, cbo);
-                glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 4 * g_boxShape.getNColors(),
-                             g_boxShape.d_colors, GL_DYNAMIC_DRAW);
+                glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 4 * g_sphereShape.getNColors(),
+					g_sphereShape.d_colors, GL_DYNAMIC_DRAW);
                 glVertexAttribPointer(g_attrib.locColor, 4, GL_FLOAT, GL_FALSE, 0, 0);
                 glEnableVertexAttribArray(g_attrib.locColor);
                 // Ensure the colors are used per instance and not for each vertex
@@ -306,7 +326,7 @@ void init(void)
                 errorOut();
         }
         // ensure that we have enough transforms
-        g_boxShape.updateTransforms(g_numBoxes,
+        g_sphereShape.updateTransforms(g_numSpheres,
                                     glm::vec3(-g_winSize.d_width/2.0f,
                                               -g_winSize.d_height/2.0f,
                                               -(g_winSize.d_far - g_winSize.d_near)/2.0f),
@@ -318,8 +338,8 @@ void init(void)
                 GLuint mmbo;
                 glGenBuffers(1, &mmbo);
                 glBindBuffer(GL_ARRAY_BUFFER, mmbo);
-                glBufferData(GL_ARRAY_BUFFER, sizeof(glm::mat4) * g_boxShape.getNTransforms(),
-                             g_boxShape.d_tfms, GL_DYNAMIC_DRAW);
+                glBufferData(GL_ARRAY_BUFFER, sizeof(glm::mat4) * g_sphereShape.getNTransforms(),
+                             g_sphereShape.d_tfms, GL_DYNAMIC_DRAW);
                 // Need to set each column separately.
                 for (int i = 0; i < 4; ++i) {
                         // Set up the vertex attribute
@@ -340,8 +360,9 @@ void init(void)
 #ifdef UNIFORM
         g_matArray.setMaterials(g_program);
         errorOut();
-        // or an uniform buffer object
+
 #else
+		// or an uniform buffer object
         // Generate an uniform buffer object
         GLuint ubo;
         glGenBuffers(1, &ubo);
@@ -377,6 +398,7 @@ void display(void)
 
         // Place the current light source at a radius from the camera
         LightSource light = g_lightArray.get( g_cLight );
+#define DEBUG_DISPLAY
 #ifdef DEBUG_DISPLAY
         cerr << cos(g_lightAngle)*g_winSize.d_width << "," <<
         sin(g_lightAngle)*g_winSize.d_width << "," <<
@@ -399,6 +421,24 @@ void display(void)
         glProgramUniform4fv(g_program, locLightPos, 1, glm::value_ptr(lightPos));
         errorOut();
 
+		// sloppy but... for now.
+		LightSource light2 = g_lightArray.get(g_cLight +1 );
+		os.clear();
+		os.str("");
+		os << "lightPosition[" << g_cLight + 1 << "]";
+		varName = os.str();
+		GLuint locLightPos2 = glGetUniformLocation(g_program, varName.c_str());
+#ifdef DEBUG_DISPLAY
+		cerr << "Location " << varName << " : " << locLightPos << endl;
+#endif
+		glm::vec4 lightPos2 =
+			glm::vec4(g_winSize.d_width,
+				g_winSize.d_width,
+				1.0f, // * static_cast<GLfloat>( !light.d_pointLight ),
+				static_cast<GLfloat>(light.d_pointLight));
+		glProgramUniform4fv(g_program, locLightPos2, 1, glm::value_ptr(lightPos2));
+		errorOut();
+
         // Instead of moving the coordinate system into the scene,
         // use lookAt -- use the center of the viewing volume as the reference coordinates
         glm::mat4 ModelView =
@@ -408,12 +448,12 @@ void display(void)
         // Update uniform for this drawing
         glUniformMatrix4fv(g_tfm.locVM, 1, GL_FALSE, glm::value_ptr(ModelView));
         // VAO is still bound - to be clear bind again
-        glBindVertexArray(g_box_vao);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, g_box_ebo);
+        glBindVertexArray(g_sphere_vao);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, g_sphere_ebo);
         glEnable(GL_PRIMITIVE_RESTART);
-        glPrimitiveRestartIndex(g_boxShape.getRestart());
-        glDrawElementsInstanced(GL_TRIANGLE_STRIP, g_boxShape.getNIndices(),
-                                GL_UNSIGNED_SHORT, 0, g_numBoxes);
+        glPrimitiveRestartIndex(g_sphereShape.getRestart());
+        glDrawElementsInstanced(GL_TRIANGLE_STRIP, g_sphereShape.getNIndices(),
+                                GL_UNSIGNED_SHORT, 0, g_numSpheres);
         errorOut();
         // swap buffers
         glFlush();

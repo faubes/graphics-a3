@@ -77,7 +77,7 @@ class MaterialArray {
     
 public:
   int getSize() {
-    return STRIDE * sizeof(float) * d_materials.size();
+    return static_cast<int>(STRIDE * sizeof(float) * d_materials.size());
   }
 
   Material get( int i ) {
@@ -117,7 +117,7 @@ public:
   }
 
   void setMaterials( GLuint program ) {
-    int maxMaterial = d_materials.size();
+    size_t maxMaterial = d_materials.size();
     for ( int m=0; m<maxMaterial; ++m )  {
       setMaterial(program, m );
     }

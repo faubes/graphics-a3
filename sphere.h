@@ -25,8 +25,9 @@
 // ==========================================================================
 #ifndef CSI4130_SPHERE_H_
 #define CSI4130_SPHERE_H_
+#define GLM_ENABLE_EXPERIMENTAL
 
-#define JOEDEBUG
+//#define JOEDEBUG
 #ifdef JOEDEBUG
 #include <iostream>
 #include <glm/gtx/string_cast.hpp>
