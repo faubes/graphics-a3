@@ -76,7 +76,7 @@ struct LightSource {
   // spot light
   // v is the vector to the vertex
   // if dir*v < cos(cutoff) then (dir * v)^N 
-  glm::vec3 d_spot_direction;
+   glm::vec3 d_spot_direction;
   GLfloat d_spot_exponent;
   GLfloat d_spot_cutoff;
   // attentuation 1/(k_c + k_l r + k_q r^2) 
@@ -88,16 +88,16 @@ struct LightSource {
   glm::vec4 d_position;
 
   // default ctor
-  LightSource() : d_ambient( 0.0f, 0.0f, 0.0f, 1.0f ), 
-	  // turn first light down for testing
-	  d_diffuse(0.01f, 0.01f, 0.01f, 0.01f),
-	  d_specular(0.01f, 0.01f, 0.01f, 0.01f),
-	//d_diffuse( 1.0f, 1.0f, 1.0f, 1.0f ),
-    //d_specular( 1.0f, 1.0f, 1.0f, 1.0f ), 
+  LightSource() : d_ambient( 0.0f ), 
+	  // dim (default) first light for testing
+	  //d_diffuse(0.0f),
+	  //d_specular(0.0f),
+	d_diffuse( 1.0f, 1.0f, 1.0f, 1.0f ),
+    d_specular( 1.0f, 1.0f, 1.0f, 1.0f ), 
     d_pointLight( true ),
     d_spot_direction( 0.0f, 0.0f, -1.0f ),
     d_spot_exponent(0),
-    d_spot_cutoff(180.0f),
+    d_spot_cutoff(80.0f),
     d_constant_attenuation(1.0f),
     d_linear_attenuation(0.0f),
     d_quadratic_attenuation(0.0f),
@@ -126,7 +126,6 @@ struct LightSource {
 	  d_linear_attenuation(_a2),
 	  d_quadratic_attenuation(_a3),
 	  d_position(_pos) {}
-
 };
 
 

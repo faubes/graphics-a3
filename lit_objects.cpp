@@ -139,7 +139,7 @@ struct ControlParameter {
 /** Global variables */
 // const int g_numBoxes = 24;
 // BoxShape g_boxShape;
-const int g_numSpheres = 32;
+const int g_numSpheres = 12;
 Sphere g_sphereShape;
 // const int g_numTorus = 12;
 // Sphere g_torusShape;
@@ -154,7 +154,8 @@ GLuint g_program;
 Transformations g_tfm;
 Attributes g_attrib;
 WindowSize g_winSize;
-int g_cLight = 0;
+enum lightIndex { SPOT_LIGHT, DIRECTION_LIGHT, POINT_LIGHT, NumLights };
+lightIndex g_cLight = SPOT_LIGHT;
 LightArray g_lightArray;
 MaterialArray g_matArray;
 GLfloat g_lightAngle = 0.0f;
@@ -203,12 +204,12 @@ void initLight( int _nLights ) {
 		glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), // specular
 		0,  // pointlight?
 		glm::vec3(0.0f),  // spot direction not used here
-		(GLfloat)1.0f, // spot exponent
-		(GLfloat)0.0f,  // cutoff
-		(GLfloat)0.2f, //a1
-		(GLfloat)0.35f, //a2 attenuation constants
-		(GLfloat)0.4f, //a3
-		glm::vec4(1.0f, 1.0f, 1.0f, 0.0f)); // z=0 for direction light
+		(GLfloat)3.0f, // spot exponent
+		(GLfloat)180.0f,  // cutoff > 90 - not a spotlight
+		(GLfloat)0.0012f, //a1
+		(GLfloat)0.001f, //a2 attenuation constants
+		(GLfloat)0.001f, //a3
+		glm::vec4(-1.0f, 1.0f, 0.0f, 0.0f)); // z=0 for direction light
 	
 	g_lightArray.append(l1);
 	return;
@@ -269,7 +270,7 @@ void init(void)
         errorOut();
 
 		// make spheres prettier
-		for (int i = 0; i < 3; ++i) {
+		for (int i = 0; i < 6; ++i) {
 			g_sphereShape.subdivide();
 		}
 
@@ -290,7 +291,7 @@ void init(void)
         errorOut();
         glBindBuffer(GL_ARRAY_BUFFER, vbo );
         glBufferData(GL_ARRAY_BUFFER,
-                     sizeof(GLfloat) * 3 * g_sphereShape.getNPoints(),
+                     sizeof(GLfloat) * g_sphereShape.getNPoints(),
                      g_sphereShape.getVertices(), GL_STATIC_DRAW);
         // pointer into the array of vertices which is now in the VAO
         glVertexAttribPointer(g_attrib.locPos, 3, GL_FLOAT, GL_FALSE, 0, 0 );
@@ -304,7 +305,7 @@ void init(void)
                 errorOut();
                 glBindBuffer(GL_ARRAY_BUFFER, nbo );
                 glBufferData(GL_ARRAY_BUFFER,
-                             sizeof(GLfloat) * 3 * g_sphereShape.getNPoints(),
+                             sizeof(GLfloat) * g_sphereShape.getNPoints(),
                              g_sphereShape.getNormals(), GL_STATIC_DRAW);
                 // pointer into the array of vertices which is now in the VAO
                 glVertexAttribPointer(g_attrib.locNorm, 3, GL_FLOAT, GL_FALSE, 0, 0 );
@@ -398,46 +399,16 @@ void display(void)
 
         // Place the current light source at a radius from the camera
         LightSource light = g_lightArray.get( g_cLight );
-#define DEBUG_DISPLAY
-#ifdef DEBUG_DISPLAY
-        cerr << cos(g_lightAngle)*g_winSize.d_width << "," <<
-        sin(g_lightAngle)*g_winSize.d_width << "," <<
-        //static_cast<GLfloat>( !light.d_pointLight )
-        20.0f << "," <<
-        static_cast<GLfloat>( light.d_pointLight) << endl;
-#endif
-        std::ostringstream os;
-        os << "lightPosition[" << g_cLight << "]";
-        std::string varName = os.str();
-        GLuint locLightPos = glGetUniformLocation(g_program, varName.c_str());
-#ifdef DEBUG_DISPLAY
-        cerr << "Location " << varName << " : " << locLightPos << endl;
-#endif
-        glm::vec4 lightPos =
-                glm::vec4( cos(g_lightAngle)*g_winSize.d_width,
-                           sin(g_lightAngle)*g_winSize.d_width,
-                           20.0f, // * static_cast<GLfloat>( !light.d_pointLight ),
-                           static_cast<GLfloat>( light.d_pointLight ));
-        glProgramUniform4fv(g_program, locLightPos, 1, glm::value_ptr(lightPos));
-        errorOut();
-
-		// sloppy but... for now.
-		LightSource light2 = g_lightArray.get(g_cLight +1 );
-		os.clear();
-		os.str("");
-		os << "lightPosition[" << g_cLight + 1 << "]";
-		varName = os.str();
-		GLuint locLightPos2 = glGetUniformLocation(g_program, varName.c_str());
-#ifdef DEBUG_DISPLAY
-		cerr << "Location " << varName << " : " << locLightPos << endl;
-#endif
-		glm::vec4 lightPos2 =
-			glm::vec4(g_winSize.d_width,
-				g_winSize.d_width,
-				1.0f, // * static_cast<GLfloat>( !light.d_pointLight ),
+		glm::vec4 lightPos =
+			glm::vec4(cos(g_lightAngle)*g_winSize.d_width,
+				sin(g_lightAngle)*g_winSize.d_width,
+				20.0f, // * static_cast<GLfloat>( !light.d_pointLight ),
 				static_cast<GLfloat>(light.d_pointLight));
-		glProgramUniform4fv(g_program, locLightPos2, 1, glm::value_ptr(lightPos2));
-		errorOut();
+		light.d_position = lightPos;
+		g_lightArray.set(0, light);
+
+		g_lightArray.setPosition(g_program, 0);
+		g_lightArray.setPosition(g_program, 1);
 
         // Instead of moving the coordinate system into the scene,
         // use lookAt -- use the center of the viewing volume as the reference coordinates
