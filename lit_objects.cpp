@@ -154,13 +154,21 @@ GLuint g_program;
 Transformations g_tfm;
 Attributes g_attrib;
 WindowSize g_winSize;
-enum lightIndex { SPOT_LIGHT, DIRECTION_LIGHT, POINT_LIGHT, NumLights };
-lightIndex g_cLight = SPOT_LIGHT;
+
 LightArray g_lightArray;
 MaterialArray g_matArray;
 GLfloat g_lightAngle = 0.0f;
 GLfloat g_camX = 0.0f, g_camY = 0.0f;
 ControlParameter g_control;
+
+// keep track of light indices
+int g_cLight = 0;
+
+// keep track of lighting model
+#define NUM_MODELS 2
+enum lightModel { BLINN_PHONG, LAFORTUNE };
+lightModel g_lightModel = BLINN_PHONG;
+
 
 void initMaterial() {
         Material mat;
@@ -192,10 +200,18 @@ void initMaterial() {
 }
 
 
-void initLight( int _nLights ) {
+void initLight() {
    
 	// light 0 is controllable default
     g_lightArray.append( LightSource() );
+	// Place the current light source at a radius from the camera
+	LightSource light = g_lightArray.get(0);
+	light.d_position =
+		glm::vec4(cos(g_lightAngle)*g_winSize.d_width,
+			sin(g_lightAngle)*g_winSize.d_width,
+			20.0f, // * static_cast<GLfloat>( !light.d_pointLight ),
+			static_cast<GLfloat>(light.d_pointLight));
+	g_lightArray.set(0, light);
 
 	// a directional light source from the center of the upper-left edge of the viewing volume
 	LightSource l1 = LightSource(
@@ -204,14 +220,31 @@ void initLight( int _nLights ) {
 		glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), // specular
 		0,  // pointlight?
 		glm::vec3(0.0f),  // spot direction not used here
-		(GLfloat)3.0f, // spot exponent
-		(GLfloat)180.0f,  // cutoff > 90 - not a spotlight
-		(GLfloat)0.0012f, //a1
-		(GLfloat)0.001f, //a2 attenuation constants
-		(GLfloat)0.001f, //a3
+		(GLfloat)0.0f, // spot exponent
+		(GLfloat)180.0f,  // cutoff > 180 - not a spotlight
+		(GLfloat)0.00012f, //a1
+		(GLfloat)0.0001f, //a2 attenuation constants
+		(GLfloat)0.0001f, //a3
 		glm::vec4(-1.0f, 1.0f, 0.0f, 0.0f)); // z=0 for direction light
 	
 	g_lightArray.append(l1);
+
+	// a point light source on the upper - right rear corner of the viewing volume
+	LightSource l2 = LightSource(
+		glm::vec4(0.0f, 0.0f, 1.0f, 1.0f), // ambient
+		glm::vec4(0.0f, 0.0f, 1.0f, 1.0f), // diffuse
+		glm::vec4(0.0f, 0.0f, 1.0f, 1.0f), // specular
+		1,  // pointlight?
+		glm::vec3(0.0f),  // spot direction
+		(GLfloat)1.0f, // spot exponent
+		(GLfloat)180.0f,  // cutoff > 180 - not a spotlight
+		(GLfloat)0.00012f, //a1
+		(GLfloat)0.0001f, //a2 attenuation constants
+		(GLfloat)0.0001f, //a3
+		glm::vec4(1.0f, 1.0f, -1.0f, 1.0f)); // z=1 for direction light
+
+	g_lightArray.append(l2);
+
 	return;
 }
 
@@ -232,23 +265,40 @@ void init(void)
         }
 
         // init lights and material in our global arrays
-        initLight(2);
+        initLight();
         initMaterial();
 
         // Load shaders
         vector<GLuint> sHandles;
         GLuint handle;
-        Shader boxes;
-        if ( !boxes.load("lit_boxes_sol.vs", GL_VERTEX_SHADER )) {
-                boxes.installShader( handle, GL_VERTEX_SHADER );
-                Shader::compile( handle );
-                sHandles.push_back( handle );
-        }
-        if ( !boxes.load("lit_boxes_sol.fs", GL_FRAGMENT_SHADER )) {
-                boxes.installShader( handle, GL_FRAGMENT_SHADER );
-                Shader::compile( handle );
-                sHandles.push_back( handle );
-        }
+        Shader objectShader;
+		switch (g_lightModel) {
+		case LAFORTUNE:
+			if (!objectShader.load("lafortune.vs", GL_VERTEX_SHADER)) {
+				objectShader.installShader(handle, GL_VERTEX_SHADER);
+				Shader::compile(handle);
+				sHandles.push_back(handle);
+			}
+			if (!objectShader.load("lafortune.fs", GL_FRAGMENT_SHADER)) {
+				objectShader.installShader(handle, GL_FRAGMENT_SHADER);
+				Shader::compile(handle);
+				sHandles.push_back(handle);
+			}
+			break;
+		case BLINN_PHONG:
+		default:
+			if (!objectShader.load("blinnphong.vs", GL_VERTEX_SHADER)) {
+				objectShader.installShader(handle, GL_VERTEX_SHADER);
+				Shader::compile(handle);
+				sHandles.push_back(handle);
+			}
+			if (!objectShader.load("blinnphong.fs", GL_FRAGMENT_SHADER)) {
+				objectShader.installShader(handle, GL_FRAGMENT_SHADER);
+				Shader::compile(handle);
+				sHandles.push_back(handle);
+			}
+			break;
+		}
         cerr << "No of handles: " << sHandles.size() << endl;
         Shader::installProgram(sHandles, g_program);
         errorOut();
@@ -269,8 +319,9 @@ void init(void)
         g_tfm.locP = glGetUniformLocation( g_program, "ProjectionMatrix");
         errorOut();
 
-		// make spheres prettier
-		for (int i = 0; i < 6; ++i) {
+		// make spheres prettier before sending to buffer.
+		// warning: setting N>7 will take a looong time to load, and possibly crash.
+		for (int i = 0; i < 5; ++i) {
 			g_sphereShape.subdivide();
 		}
 
@@ -397,18 +448,11 @@ void display(void)
 {
         glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
-        // Place the current light source at a radius from the camera
-        LightSource light = g_lightArray.get( g_cLight );
-		glm::vec4 lightPos =
-			glm::vec4(cos(g_lightAngle)*g_winSize.d_width,
-				sin(g_lightAngle)*g_winSize.d_width,
-				20.0f, // * static_cast<GLfloat>( !light.d_pointLight ),
-				static_cast<GLfloat>(light.d_pointLight));
-		light.d_position = lightPos;
-		g_lightArray.set(0, light);
 
-		g_lightArray.setPosition(g_program, 0);
-		g_lightArray.setPosition(g_program, 1);
+		for (int i = 0; i < g_lightArray.size(); ++i) {
+			g_lightArray.setPosition(g_program, i);
+		}
+		g_lightArray.setNLights(g_program);
 
         // Instead of moving the coordinate system into the scene,
         // use lookAt -- use the center of the viewing volume as the reference coordinates
@@ -474,27 +518,36 @@ void keyboard (unsigned char key, int x, int y)
         case 'q':
                 exit(0);
                 break;
+		case 'i':
+			g_cLight = ++g_cLight % g_lightArray.size();
+			cerr << "Toggle Light " << g_cLight << endl;
+			break;
         case '+':
                 g_lightAngle += 0.1f;
+				cerr << "lightAngle: " << g_lightAngle << endl;
                 break;
         case '-':
                 g_lightAngle -= 0.1f;
+				cerr << "lightAngle: " << g_lightAngle << endl;
                 break;
         case 'P':
                 // switch to perspective
                 g_winSize.d_perspective = true;
                 reshape( g_winSize.d_widthPixel, g_winSize.d_heightPixel );
+				cerr << "Switch to persepective" << endl;
                 break;
         case 'p':
                 // switch to perspective
                 g_winSize.d_perspective = false;
                 reshape( g_winSize.d_widthPixel, g_winSize.d_heightPixel );
+				cerr << "Switch to ortho" << endl;
                 break;
         case 'Z':
                 // increase near plane
                 g_winSize.d_near += 0.1f;
                 g_winSize.d_far += 0.1f;
                 reshape( g_winSize.d_widthPixel, g_winSize.d_heightPixel );
+				cerr << "z-near: " << g_winSize.d_near << endl;
                 break;
         case 'z':
                 // decrease near plane
@@ -503,6 +556,7 @@ void keyboard (unsigned char key, int x, int y)
                         g_winSize.d_far -= 0.1f;
                 }
                 reshape( g_winSize.d_widthPixel, g_winSize.d_heightPixel );
+				cerr << "z-near: " << g_winSize.d_near << endl;
                 break;
         case 'L':
                 break;
@@ -513,13 +567,15 @@ void keyboard (unsigned char key, int x, int y)
                 light = g_lightArray.get( g_cLight );
                 light.d_ambient = glm::vec4( 1.0f, 1.0f, 1.0f, 1.0f);
                 g_lightArray.set( g_cLight, light );
-                g_lightArray.setLight(g_program, g_cLight );
+                g_lightArray.setLight(g_program, g_cLight ); 
+				cerr << "Light " << g_cLight << " ambient on." << endl;
                 break;
         case 'a':
                 light = g_lightArray.get( g_cLight );
                 light.d_ambient = glm::vec4( 0.0f, 0.0f, 0.0f, 1.0f);
                 g_lightArray.set( g_cLight, light );
                 g_lightArray.setLight(g_program, g_cLight );
+				cerr << "Light " << g_cLight << " ambient off." << endl;
                 break;
         // directional/point light
         case 'D':
@@ -528,13 +584,15 @@ void keyboard (unsigned char key, int x, int y)
                 light.d_pointLight = false;
                 g_lightArray.set( g_cLight, light );
                 g_lightArray.setLight(g_program, g_cLight );
+				cerr << "Light " << g_cLight << " cutoff: " << light.d_spot_cutoff << endl;
                 break;
         case 'd':
                 light = g_lightArray.get( g_cLight );
                 light.d_pointLight = true;
                 g_lightArray.set( g_cLight, light );
                 g_lightArray.setLight(g_program, g_cLight );
-                break;
+				cerr << "Light " << g_cLight << " cutoff: " << light.d_spot_cutoff << endl;
+				break;
         // spot light on/off
         case 'S':
                 light = g_lightArray.get( g_cLight );
@@ -544,8 +602,8 @@ void keyboard (unsigned char key, int x, int y)
                 g_control.d_attenuation = false;
                 g_lightArray.set( g_cLight, light );
                 g_lightArray.setLight(g_program, g_cLight );
-                cerr << "Spot light: " <<  light.d_spot_exponent
-                     << " " << light.d_spot_cutoff << endl;
+				cerr << "Light: " << g_cLight << " spot exponent: " << light.d_spot_exponent
+					<< " cutoff " << light.d_spot_cutoff << endl;
                 break;
         case 's':
                 light = g_lightArray.get( g_cLight );
@@ -553,8 +611,8 @@ void keyboard (unsigned char key, int x, int y)
                 g_control.d_spot = false;
                 g_lightArray.set( g_cLight, light );
                 g_lightArray.setLight(g_program, g_cLight );
-                cerr << "Spot light: " <<  light.d_spot_exponent
-                     << " " << light.d_spot_cutoff << endl;
+                cerr << "Light: " << g_cLight << " spot exponent: " <<  light.d_spot_exponent
+                     << " cutoff " << light.d_spot_cutoff << endl;
                 break;
         // attenuation on/off
         case 'T':
@@ -566,7 +624,7 @@ void keyboard (unsigned char key, int x, int y)
                 g_control.d_spot = false;
                 g_lightArray.set( g_cLight, light );
                 g_lightArray.setLight(g_program, g_cLight );
-                cerr << "Attenuation: " <<  light.d_constant_attenuation
+                cerr << "Light: " << g_cLight << " attenuation: " <<  light.d_constant_attenuation
                      << " " <<light.d_linear_attenuation
                      << " " << light.d_quadratic_attenuation << endl;
                 break;
@@ -578,7 +636,7 @@ void keyboard (unsigned char key, int x, int y)
                 g_control.d_attenuation = false;
                 g_lightArray.set( g_cLight, light );
                 g_lightArray.setLight(g_program, g_cLight );
-                cerr << "Attenuation: " <<  light.d_constant_attenuation
+                cerr << "Light: " << g_cLight << " attenuation: " <<  light.d_constant_attenuation
                      << " " << light.d_linear_attenuation
                      << " " << light.d_quadratic_attenuation << endl;
                 break;
@@ -613,13 +671,13 @@ void specialkeys( int key, int x, int y )
                 light = g_lightArray.get( g_cLight );
                 if (g_control.d_spot) {
                         light.d_spot_exponent = std::max(light.d_spot_exponent-0.1f, 0.0f);
-                        cerr << "Spot light: " <<  light.d_spot_exponent
+                        cerr << "Light: " << g_cLight << " Spot light: " <<  light.d_spot_exponent
                              << " " << light.d_spot_cutoff << endl;
                 }
                 if (g_control.d_attenuation) {
                         light.d_quadratic_attenuation =
                                 std::max(light.d_quadratic_attenuation-0.0005f, 0.0f);
-                        cerr << "Attenuation: " <<  light.d_constant_attenuation
+                        cerr << "Light: " << g_cLight << " Attenuation: " <<  light.d_constant_attenuation
                              << " " << light.d_linear_attenuation
                              << " " << light.d_quadratic_attenuation << endl;
                 }
@@ -631,12 +689,12 @@ void specialkeys( int key, int x, int y )
                 if (g_control.d_spot) {
                         light.d_spot_exponent =
                                 std::min( light.d_spot_exponent+0.1f, 128.0f);
-                        cerr << "Spot light: " <<  light.d_spot_exponent
+                        cerr << "Light: " << g_cLight << " Spot light: " <<  light.d_spot_exponent
                              << " " << light.d_spot_cutoff << endl;
                 }
                 if (g_control.d_attenuation) {
                         light.d_quadratic_attenuation += 0.0005f;
-                        cerr << "Attenuation: " <<  light.d_constant_attenuation
+                        cerr << "Light: " << g_cLight << " Attenuation: " <<  light.d_constant_attenuation
                              << " " << light.d_linear_attenuation
                              << " " << light.d_quadratic_attenuation << endl;
                 }
@@ -647,12 +705,12 @@ void specialkeys( int key, int x, int y )
                 light = g_lightArray.get( g_cLight );
                 if (g_control.d_spot) {
                         light.d_spot_cutoff = std::min(light.d_spot_cutoff+1.0f, 90.0f);
-                        cerr << "Spot light: " <<  light.d_spot_exponent
+                        cerr << "Light: " << g_cLight << " Spot light: " <<  light.d_spot_exponent
                              << " " << light.d_spot_cutoff << endl;
                 }
                 if (g_control.d_attenuation) {
                         light.d_linear_attenuation = light.d_linear_attenuation+0.001f;
-                        cerr << "Attenuation: " <<  light.d_constant_attenuation
+                        cerr << "Light: " << g_cLight << " Attenuation: " <<  light.d_constant_attenuation
                              << " " << light.d_linear_attenuation
                              << " " << light.d_quadratic_attenuation << endl;
                 }
@@ -663,13 +721,13 @@ void specialkeys( int key, int x, int y )
                 light = g_lightArray.get( g_cLight );
                 if (g_control.d_spot) {
                         light.d_spot_cutoff = std::max(light.d_spot_cutoff-1.0f, 0.0f);
-                        cerr << "Spot light: " <<  light.d_spot_exponent
+                        cerr << "Light: " << g_cLight << " Spot light: " <<  light.d_spot_exponent
                              << " " << light.d_spot_cutoff << endl;
                 }
                 if (g_control.d_attenuation) {
                         light.d_linear_attenuation =
                                 std::max(light.d_linear_attenuation-0.001f, 0.0f);
-                        cerr << "Attenuation: " <<  light.d_constant_attenuation
+                        cerr << "Light: " << g_cLight << " Attenuation: " <<  light.d_constant_attenuation
                              << " " << light.d_linear_attenuation
                              << " " << light.d_quadratic_attenuation << endl;
                 }

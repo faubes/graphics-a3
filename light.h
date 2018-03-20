@@ -88,7 +88,7 @@ struct LightSource {
   glm::vec4 d_position;
 
   // default ctor
-  LightSource() : d_ambient( 0.0f ), 
+  LightSource() : d_ambient( 1.0f, 1.0f, 1.0f, 1.0f ), 
 	  // dim (default) first light for testing
 	  //d_diffuse(0.0f),
 	  //d_specular(0.0f),
@@ -154,6 +154,11 @@ public:
     return d_lights.size();
   }
 
+  void setNLights(GLuint program) {
+	  GLint locNLight = -1;
+	  if ((locNLight = glGetUniformLocation(program, "nLights")) >= 0)
+		  glProgramUniform1i(program, locNLight, static_cast<GLint>(size()));
+  }
 
   void setLight( GLuint program, int _l ) {
     assert( _l < d_lights.size());
