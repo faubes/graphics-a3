@@ -72,14 +72,18 @@ struct LightSource {
   glm::vec4 d_diffuse;
   glm::vec4 d_specular;
   // switch between point and directional light source
-  bool d_pointLight;
+	bool d_enabled;
+  bool d_local;
+	bool d_spotLight;
+
+	GLfloat d_strength;
   // spot light
   // v is the vector to the vertex
-  // if dir*v < cos(cutoff) then (dir * v)^N 
-   glm::vec3 d_spot_direction;
+  // if dir*v < cos(cutoff) then (dir * v)^N
+  glm::vec3 d_spot_direction;
   GLfloat d_spot_exponent;
   GLfloat d_spot_cutoff;
-  // attentuation 1/(k_c + k_l r + k_q r^2) 
+  // attentuation 1/(k_c + k_l r + k_q r^2)
   // r is the distance of a vertex from the light source
   GLfloat d_constant_attenuation;
   GLfloat d_linear_attenuation;
@@ -88,15 +92,18 @@ struct LightSource {
   glm::vec4 d_position;
 
   // default ctor
-  LightSource() : d_ambient( 1.0f, 1.0f, 1.0f, 1.0f ), 
+  LightSource() : d_ambient( 1.0f, 1.0f, 1.0f, 1.0f ),
 	  // dim (default) first light for testing
 	  //d_diffuse(0.0f),
 	  //d_specular(0.0f),
 	d_diffuse( 1.0f, 1.0f, 1.0f, 1.0f ),
-    d_specular( 1.0f, 1.0f, 1.0f, 1.0f ), 
-    d_pointLight( true ),
+    d_specular( 1.0f, 1.0f, 1.0f, 1.0f ),
+		d_enabled( true ),
+    d_local( true ),
+		d_spotLight( true ),
+		d_strength(10.0f),
     d_spot_direction( 0.0f, 0.0f, -1.0f ),
-    d_spot_exponent(0),
+    d_spot_exponent(1),
     d_spot_cutoff(80.0f),
     d_constant_attenuation(1.0f),
     d_linear_attenuation(0.0f),
@@ -104,21 +111,27 @@ struct LightSource {
     d_position( 0.0f, 0.0f, 0.0f, 0.0f ) {}
 
   // verbose ctor
-  LightSource(vec4 _ambient, 
-	  vec4 _diffuse, 
-	  vec4 _specular, 
-	  bool _pointLight, 
+  LightSource(vec4 _ambient,
+	  vec4 _diffuse,
+	  vec4 _specular,
+		bool _enabled,
+	  bool _local,
+		bool _spotLight,
+		GLfloat _strength,
 	  vec3 _spot_dir,
-	  GLfloat _spot_exponent, 
-	  GLfloat _spot_cutoff, 
-	  GLfloat _a1, 
-	  GLfloat _a2, 
-	  GLfloat _a3, 
-	  vec4 _pos ) 
+	  GLfloat _spot_exponent,
+	  GLfloat _spot_cutoff,
+	  GLfloat _a1,
+	  GLfloat _a2,
+	  GLfloat _a3,
+	  vec4 _pos )
 	  : d_ambient(_ambient),
 	  d_diffuse(_diffuse),
 	  d_specular(_specular),
-	  d_pointLight(_pointLight),
+		d_enabled( _enabled ),
+	  d_local(_local),
+		d_spotLight(_spotLight),
+		d_strength( _strength ),
 	  d_spot_direction(_spot_dir),
 	  d_spot_exponent(_spot_exponent),
 	  d_spot_cutoff(_spot_cutoff),
@@ -132,7 +145,7 @@ struct LightSource {
 class LightArray {
   const static int STRIDE = 26;
   std::vector<LightSource> d_lights;
-    
+
 public:
   LightSource get( int i ) {
     assert(i < d_lights.size());
@@ -173,9 +186,25 @@ public:
       glProgramUniform4fv(program, locLight, 1, glm::value_ptr(d_lights[_l].d_diffuse));
     if ((locLight = glGetUniformLocation(program, (varName  + "].specular").c_str()))>=0)
       glProgramUniform4fv(program, locLight, 1, glm::value_ptr(d_lights[_l].d_specular));
-    // boolean pointLight is not used in shader
     if ((locLight = glGetUniformLocation(program, (varName  + "].spot_direction").c_str()))>=0)
       glProgramUniform3fv(program, locLight, 1, glm::value_ptr(d_lights[_l].d_spot_direction));
+
+			// added booleans to make code easier to understand
+
+		if ((locLight = glGetUniformLocation(program, (varName  + "].isEnabled").c_str()))>=0)
+	      glProgramUniform1ui(program, locLight, d_lights[_l].d_enabled);
+				//cerr << "uniform location for isEnabled: " << locLight << endl;
+		if ((locLight = glGetUniformLocation(program, (varName  + "].isLocal").c_str()))>=0)
+							glProgramUniform1ui(program, locLight, d_lights[_l].d_local);
+				//cerr << "uniform location for isPointLight: " << locLight << endl;
+		if ((locLight = glGetUniformLocation(program, (varName  + "].isSpotLight").c_str()))>=0)
+					glProgramUniform1ui(program, locLight, d_lights[_l].d_spotLight);
+					//cerr << "uniform location for isSpotLight: " << locLight << endl;
+
+		if ((locLight = glGetUniformLocation(program, (varName  + "].strength").c_str()))>=0)
+								glProgramUniform1f(program, locLight, d_lights[_l].d_strength);
+								//cerr << "uniform location for isSpotLight: " << locLight << endl;
+
     if ((locLight = glGetUniformLocation(program, (varName  + "].spot_exponent").c_str()))>=0)
       glProgramUniform1f(program, locLight, d_lights[_l].d_spot_exponent);
     if ((locLight = glGetUniformLocation(program, (varName  + "].spot_cutoff").c_str()))>=0)
@@ -186,7 +215,7 @@ public:
       glProgramUniform1f(program, locLight, d_lights[_l].d_linear_attenuation);
     if ((locLight = glGetUniformLocation(program, (varName  + "].quadratic_attenuation").c_str()))>=0)
       glProgramUniform1f(program, locLight, d_lights[_l].d_quadratic_attenuation);
-  
+			errorOut();
     return;
   }
 
