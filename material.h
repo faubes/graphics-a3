@@ -61,20 +61,24 @@ struct Material {
   glm::vec4 d_diffuse;
   glm::vec4 d_specular;
   GLfloat d_shininess;
+  GLfloat d_Kxy;
+  GLfloat d_Kz;
 
 Material() : d_emissive(0.0, 0.0, 0.0, 1.0),
-    d_ambient( 0.2f, 0.2f, 0.2f, 1.0f ), 
-    d_diffuse( 0.8f, 0.8f, 0.8f, 1.0f ), 
+    d_ambient( 0.2f, 0.2f, 0.2f, 1.0f ),
+    d_diffuse( 0.8f, 0.8f, 0.8f, 1.0f ),
     d_specular( 0.0f, 0.0f, 0.0f, 1.0f ),
-    d_shininess( 1.0f ) {}
+    d_shininess( 1.0f ),
+    d_Kxy(-0.5f),
+    d_Kz(0.5f) {}
 };
- 
+
 
 class MaterialArray {
   const static int STRIDE = 20; // 5*4
 
   std::vector<Material> d_materials;
-    
+
 public:
   int getSize() {
     return static_cast<int>(STRIDE * sizeof(float) * d_materials.size());

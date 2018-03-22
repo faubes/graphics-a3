@@ -151,6 +151,7 @@ GLuint g_sphere_vao;
 //GLuint g_torus_ebo;
 //GLuint g_torus_vao;
 GLuint g_program;
+
 Transformations g_tfm;
 Attributes g_attrib;
 WindowSize g_winSize;
@@ -201,8 +202,7 @@ void initMaterial() {
         /*Material
            c d
            c s
-           n
-         */
+           n         */
         //Blue rubber
         //0.0425 0.0698 0.0957
         //0.00533 0.00471 0.00333
@@ -233,8 +233,38 @@ void initMaterial() {
         mat.d_ambient = glm::vec4(0.0f);
         mat.d_diffuse = glm::vec4(0.0695f, 0.0628f, 0.0446f, 1.0f);
         mat.d_specular = glm::vec4(0.0742f, 0.0615f, 0.0412f, 1.0f);
-        mat.d_shininess = 75;
+        mat.d_shininess = 75.0f;
         g_matArray.append( mat);
+
+        // Lafortune materials
+        //Blue rubber
+        mat.d_ambient = glm::vec4(0.0f);
+        mat.d_diffuse = glm::vec4(0.0464f, 0.0736f, 0.0986f, 1.0f);
+        mat.d_specular = glm::vec4(0.291f, 0.239f, 0.159f, 1.0f);
+        mat.d_shininess = 32.6f;
+        mat.d_Kxy = -0.635f;
+        mat.d_Kz = 0.44f;
+        g_matArray.append( mat);
+
+        //Brass
+        mat.d_ambient = glm::vec4(0.0f);
+        mat.d_diffuse = glm::vec4(0.0387f, 0.0273f, 0.0123f, 1.0f);
+        mat.d_specular = glm::vec4(0.118f, 0.0479f, 0.0172f, 1.0f);
+        mat.d_shininess = 1.07e+004;
+        mat.d_Kxy = -0.577f;
+        mat.d_Kz = 0.577f;
+        g_matArray.append( mat);
+
+        //Metallic-silver
+
+        mat.d_ambient = glm::vec4(0.0f);
+        mat.d_diffuse = glm::vec4(0.0552f, 0.05f, 0.0359f, 1.0f);
+        mat.d_specular = glm::vec4(0.434f, 0.363f, 0.243f, 1.0f);
+        mat.d_shininess = 21.4;
+        mat.d_Kxy = -0.587f;
+        mat.d_Kz = 0.559f;
+        g_matArray.append( mat);
+
 
         return;
 }
@@ -256,34 +286,37 @@ void initLight() {
         // a directional light source from the center of the upper-left edge of the viewing volume
         LightSource l1 = LightSource(
                 glm::vec4(0.1f, 0.1f, 0.1f, 1.0f), // ambient
-                glm::vec4(0.4f, 0.4f, 0.4f, 1.0f), // diffuse
-                glm::vec4(0.4f, 0.4f, 0.4f, 1.0f), // specular
+                glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), // diffuse
+                glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), // specular
                 1, // enabled
                 0, // pointLight
                 0, // spotLight
                 10.0f, // strength
                 glm::vec3(1.0f, 0.0f, 0.0f), // not used -- but set in case toggled
-                (GLfloat)1.0f, // spot exponent
+                (GLfloat)8.0f, // spot exponent
                 (GLfloat)80.0f, // cutoff > 180 - not a spotlight
                 // no attenuation for direction light
                 (GLfloat)1.0f, //a1
                 (GLfloat)0.0f, //a2 attenuation constants
                 (GLfloat)0.0f, //a3
-                glm::vec4(-1.0f, 1.0f, 0.0f, 0.0f)); // z=0 for direction light
+                glm::vec4(-cos(g_lightAngle)*g_winSize.d_width,
+                          sin(g_lightAngle)*g_winSize.d_width,
+                          0.0f, // * static_cast<GLfloat>( !light.d_local ),
+                          0.0)); // z=0 for direction light
 
         g_lightArray.append(l1);
 
         // a point light source on the upper - right rear corner of the viewing volume
         LightSource l2 = LightSource(
                 glm::vec4(0.1f, 0.1f, 0.1f, 1.0f), // ambient
-                glm::vec4(0.4f, 0.4f, 0.4f, 1.0f), // diffuse
-                glm::vec4(0.4f, 0.4f, 0.4f, 1.0f), // specular
+                glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), // diffuse
+                glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), // specular
                 1, // enabled
                 1, // pointLight
                 0, // spotLight
                 10.0f, // strength
                 glm::vec3(-1.0f, -1.0f, 1.0f), // spot direction
-                (GLfloat)1.0f, // spot exponent
+                (GLfloat)8.0f, // spot exponent
                 (GLfloat)80.0f, // cutoff > 180 - not a spotlight
                 (GLfloat)1.0f, //a1
                 (GLfloat)0.0f, //a2 attenuation constants

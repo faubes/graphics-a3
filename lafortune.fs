@@ -60,6 +60,8 @@ struct Material {
   vec4 diffuse;
   vec4 specular;
   float shininess;
+  float Kxy;
+  float Kz;
 };
 
 layout (std140) uniform MaterialBlock {
@@ -97,7 +99,10 @@ uniform LightSource lights[MAX_LIGHTS];
 uniform int nLights;
 
 void main() {
-  int mI = materialId % 3 + 4; // use only new materials
+  int mI = materialId % 3 + 7; // use only new materials
+  float Kxy = materials[mI].Kxy; // lafortune material properties
+  float Kz = materials[mI].Kz; // for easy access
+
   vec3 NVec = normalize(normalFrag);
   vec3 EVec = normalize(eyeFrag);
   vec4 scatteredLight = vec4(0.0);
@@ -117,6 +122,7 @@ void main() {
       float diffuse = max(0.0,dot(NVec,LVec));
       // half vector and normal
       float specular = max(0.0,dot(NVec,HVec));
+      float n = lights[i].spot_exponent;
 
       float attenuation = 1.0;
       // for local lights, compute attenuation
@@ -127,12 +133,12 @@ void main() {
                 lights[i].quadratic_attenuation * distanceLight * distanceLight);
           // if spotlight hits outside cosine fall off, set attenuation to 0
           if ( lights[i].isSpotLight ) {
-                 float dotSV = dot(-LVec,normalize(lights[i].spot_direction)); // what happens if normalize 0 vec??
+                 float dotSV = dot(LVec,-normalize(lights[i].spot_direction));
                  if ( dotSV < cos(radians(lights[i].spot_cutoff))) {
                    attenuation = 0.0;
                } else {
-                    float n = lights[i].spot_exponent;
-                   attenuation *= pow(dotSV,n) * (n+2)/(2*M_PI) ;
+
+                   attenuation *= pow(dotSV,n) ;
                }
              } // end spotlight handling
            } // end PointLight handling
@@ -142,12 +148,25 @@ void main() {
         specular = 0.0;
       }
       else {
-        specular = pow(specular, materials[mI].shininess);
+        // lafortune
+        // c_d + c_s(Kxy (l_x * v_x + l_y * v_y ) + Kz * l_z * v_z)^n * (n+2)/2*pi * (max(|Kxy|, |Kz|))^n
+
+        // (Kxy (l_x * v_x + l_y * v_y ) + Kz * l_z * v_z)^n
+        specular = (Kxy * (LVec.x * EVec.x + LVec.y * EVec.y) + Kz * LVec.z * EVec.z);
+        specular = pow(specular, n);
+        float maxK = max(abs(materials[mI].Kxy), abs(materials[mI].Kz));
+        maxK = pow(maxK, n);
+
+        specular *= (n+2)/ ( 2 * M_PI * maxK );
       }
+
 
       // scattered light
       scatteredLight += lights[i].strength * attenuation * materials[mI].ambient * lights[i].ambient;
       scatteredLight += lights[i].strength * diffuse * attenuation * materials[mI].diffuse * lights[i].diffuse;
+
+      // lafortune
+      // c_d + c_s(Kxy (l_x * v_x + l_y * v_y ) + Kz * l_z * v_z)^n * (n+2)/2*pi * (max(|Kxy|, |Kz|))^n
 
       // reflected light
       reflectedLight += lights[i].strength * specular * attenuation * lights[i].specular * materials[mI].specular;

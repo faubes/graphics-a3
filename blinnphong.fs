@@ -60,6 +60,8 @@ struct Material {
   vec4 diffuse;
   vec4 specular;
   float shininess;
+  float Kxy; // not used in Blinn-Phong but copied to make uniform buffer easy
+  float Kz;
 };
 
 layout (std140) uniform MaterialBlock {
