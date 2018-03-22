@@ -92,7 +92,7 @@ struct LightSource {
   glm::vec4 d_position;
 
   // default ctor
-  LightSource() : d_ambient( 1.0f, 1.0f, 1.0f, 1.0f ),
+  LightSource() : d_ambient( 1.0f, 1.0f, 1.0f, 0.1f ),
 	  // dim (default) first light for testing
 	  //d_diffuse(0.0f),
 	  //d_specular(0.0f),
@@ -101,9 +101,9 @@ struct LightSource {
 		d_enabled( true ),
     d_local( true ),
 		d_spotLight( true ),
-		d_strength(10.0f),
+		d_strength(5.0f),
     d_spot_direction( 0.0f, 0.0f, -1.0f ),
-    d_spot_exponent(1),
+    d_spot_exponent(10.0f),
     d_spot_cutoff(80.0f),
     d_constant_attenuation(1.0f),
     d_linear_attenuation(0.0f),

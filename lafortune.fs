@@ -60,7 +60,7 @@ struct Material {
   vec4 diffuse;
   vec4 specular;
   float shininess;
-  float Kxy;
+  float Kxy; // not used in Blinn-Phong but copied to make uniform buffer easy
   float Kz;
 };
 
@@ -70,25 +70,18 @@ layout (std140) uniform MaterialBlock {
 
 
 struct LightSource {
-
   bool isEnabled;
   bool isLocal;
   bool isSpotLight;
-
   float strength;
-
   vec4 ambient;
   vec4 diffuse;
   vec4 specular;
   // spot light
-  // v is the vector to the vertex
-  // if dir*v < cos(cutoff) then (dir * v)^N
-
   vec3 spot_direction;
   float spot_exponent;
   float spot_cutoff;
-  // attentuation 1/(k_c + k_l r + k_q r^2)
-  // r is the distance of a vertex from the light source
+  // attenuation 1/(k_c + k_l r + k_q r^2)
   float constant_attenuation;
   float linear_attenuation;
   float quadratic_attenuation;
@@ -100,9 +93,6 @@ uniform int nLights;
 
 void main() {
   int mI = materialId % 3 + 7; // use only new materials
-  float Kxy = materials[mI].Kxy; // lafortune material properties
-  float Kz = materials[mI].Kz; // for easy access
-
   vec3 NVec = normalize(normalFrag);
   vec3 EVec = normalize(eyeFrag);
   vec4 scatteredLight = vec4(0.0);
@@ -119,10 +109,12 @@ void main() {
 
       // cosine of the directions
       // surface normal and light
-      float diffuse = max(0.0,dot(NVec,LVec));
+      float dotNL = max(0.0,dot(NVec,LVec));
       // half vector and normal
-      float specular = max(0.0,dot(NVec,HVec));
-      float n = lights[i].spot_exponent;
+      float dotNH = max(0.0,dot(NVec,HVec));
+
+      float Kxy = materials[mI].Kxy;
+      float Kz = materials[mI].Kz;
 
       float attenuation = 1.0;
       // for local lights, compute attenuation
@@ -133,40 +125,31 @@ void main() {
                 lights[i].quadratic_attenuation * distanceLight * distanceLight);
           // if spotlight hits outside cosine fall off, set attenuation to 0
           if ( lights[i].isSpotLight ) {
-                 float dotSV = dot(LVec,-normalize(lights[i].spot_direction));
+                 float dotSV = dot(-LVec,normalize(lights[i].spot_direction)); // what happens if normalize 0 vec??
                  if ( dotSV < cos(radians(lights[i].spot_cutoff))) {
                    attenuation = 0.0;
                } else {
-
-                   attenuation *= pow(dotSV,n) ;
+                   attenuation *= pow(dotSV, lights[i].spot_exponent);
                }
              } // end spotlight handling
            } // end PointLight handling
 
-      // check if light hits surface
-      if (diffuse == 0.0) {
-        specular = 0.0;
-      }
-      else {
-        // lafortune
-        // c_d + c_s(Kxy (l_x * v_x + l_y * v_y ) + Kz * l_z * v_z)^n * (n+2)/2*pi * (max(|Kxy|, |Kz|))^n
+           // lafortune
+           // c_d + c_s(Kxy (l_x * v_x + l_y * v_y ) + Kz * l_z * v_z)^n * (n+2)/2*pi * (max(|Kxy|, |Kz|))^n
 
-        // (Kxy (l_x * v_x + l_y * v_y ) + Kz * l_z * v_z)^n
-        specular = (Kxy * (LVec.x * EVec.x + LVec.y * EVec.y) + Kz * LVec.z * EVec.z);
-        specular = pow(specular, n);
-        float maxK = max(abs(materials[mI].Kxy), abs(materials[mI].Kz));
-        maxK = pow(maxK, n);
-
-        specular *= (n+2)/ ( 2 * M_PI * maxK );
-      }
-
+           // (Kxy (l_x * v_x + l_y * v_y ) + Kz * l_z * v_z)^n
+           float n = materials[mI].shininess;
+           float specular = (Kxy * (LVec.x * EVec.x + LVec.y * EVec.y) + Kz * LVec.z * EVec.z);
+           specular = pow(specular, n);
+           float maxK = max(abs(Kxy), abs(Kz));
+           maxK = pow(maxK, n);
+           specular *= (n+2) / (2*M_PI*maxK);
 
       // scattered light
-      scatteredLight += lights[i].strength * attenuation * materials[mI].ambient * lights[i].ambient;
-      scatteredLight += lights[i].strength * diffuse * attenuation * materials[mI].diffuse * lights[i].diffuse;
 
-      // lafortune
-      // c_d + c_s(Kxy (l_x * v_x + l_y * v_y ) + Kz * l_z * v_z)^n * (n+2)/2*pi * (max(|Kxy|, |Kz|))^n
+      // removed ambient term. Too bright
+      // scatteredLight += lights[i].strength * materials[mI].ambient * lights[i].ambient;
+      scatteredLight += lights[i].strength * dotNL * attenuation * materials[mI].diffuse * lights[i].diffuse;
 
       // reflected light
       reflectedLight += lights[i].strength * specular * attenuation * lights[i].specular * materials[mI].specular;
@@ -176,5 +159,5 @@ void main() {
 
   color =  min(scatteredLight + reflectedLight, vec4(1.0)); // add material transparency?
   // color = colorVertFrag;
-  //color = vec4(1.0);
+  // color = vec4(LVec,1.0);
 }

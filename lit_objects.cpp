@@ -241,7 +241,7 @@ void initMaterial() {
         mat.d_ambient = glm::vec4(0.0f);
         mat.d_diffuse = glm::vec4(0.0387f, 0.0273f, 0.0123f, 1.0f);
         mat.d_specular = glm::vec4(0.118f, 0.0479f, 0.0172f, 1.0f);
-        mat.d_shininess = 1.07e+004;
+        mat.d_shininess = 10700;
         mat.d_Kxy = -0.577f;
         mat.d_Kz = 0.577f;
         g_matArray.append( mat);
@@ -274,15 +274,15 @@ void initLight() {
 
         // a directional light source from the center of the upper-left edge of the viewing volume
         LightSource l1 = LightSource(
-                glm::vec4(0.1f, 0.1f, 0.1f, 1.0f), // ambient
-                glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), // diffuse
-                glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), // specular
+                glm::vec4(1.0f), // ambient
+                glm::vec4(1.0f), // diffuse
+                glm::vec4(1.0f), // specular
                 1, // enabled
                 0, // pointLight
                 0, // spotLight
-                10.0f, // strength
+                5.0f, // strength
                 glm::vec3(1.0f, 0.0f, 0.0f), // not used -- but set in case toggled
-                (GLfloat)8.0f, // spot exponent
+                (GLfloat)10.0f, // spot exponent
                 (GLfloat)80.0f, // cutoff > 180 - not a spotlight
                 // no attenuation for direction light
                 (GLfloat)1.0f, //a1
@@ -297,15 +297,15 @@ void initLight() {
 
         // a point light source on the upper - right rear corner of the viewing volume
         LightSource l2 = LightSource(
-                glm::vec4(0.1f, 0.1f, 0.1f, 1.0f), // ambient
-                glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), // diffuse
-                glm::vec4(0.8f, 0.8f, 0.8f, 1.0f), // specular
+                glm::vec4(1.0f), // ambient
+                glm::vec4(1.0f), // diffuse
+                glm::vec4(1.0f), // specular
                 1, // enabled
                 1, // pointLight
                 0, // spotLight
-                10.0f, // strength
+                5.0f, // strength
                 glm::vec3(-1.0f, -1.0f, 1.0f), // spot direction
-                (GLfloat)8.0f, // spot exponent
+                (GLfloat)10.0f, // spot exponent
                 (GLfloat)80.0f, // cutoff > 180 - not a spotlight
                 (GLfloat)1.0f, //a1
                 (GLfloat)0.0f, //a2 attenuation constants

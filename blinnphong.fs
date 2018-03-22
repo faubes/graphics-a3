@@ -116,9 +116,10 @@ void main() {
 
       // cosine of the directions
       // surface normal and light
-      float diffuse = max(0.0,dot(NVec,LVec));
+      float dotNL = max(0.0,dot(NVec,LVec));
       // half vector and normal
-      float specular = max(0.0,dot(NVec,HVec));
+      float dotNH = max(0.0,dot(NVec,HVec));
+
 
       float attenuation = 1.0;
       // for local lights, compute attenuation
@@ -133,23 +134,18 @@ void main() {
                  if ( dotSV < cos(radians(lights[i].spot_cutoff))) {
                    attenuation = 0.0;
                } else {
-                    float n = lights[i].spot_exponent;
-                   attenuation *= pow(dotSV,n) * (n+2)/(2*M_PI) ;
+                   attenuation *= pow(dotSV, lights[i].spot_exponent);
                }
              } // end spotlight handling
            } // end PointLight handling
 
-      // check if light hits surface
-      if (diffuse == 0.0) {
-        specular = 0.0;
-      }
-      else {
-        specular = pow(specular, materials[mI].shininess);
-      }
-
+      float n = materials[mI].shininess;
+      float specular = pow(dotNH, n) * (n+2)/(2*M_PI);
       // scattered light
-      scatteredLight += lights[i].strength * attenuation * materials[mI].ambient * lights[i].ambient;
-      scatteredLight += lights[i].strength * diffuse * attenuation * materials[mI].diffuse * lights[i].diffuse;
+
+      // removed ambient term. Too bright
+      // scatteredLight += lights[i].strength * materials[mI].ambient * lights[i].ambient;
+      scatteredLight += lights[i].strength * dotNL * attenuation * materials[mI].diffuse * lights[i].diffuse;
 
       // reflected light
       reflectedLight += lights[i].strength * specular * attenuation * lights[i].specular * materials[mI].specular;
