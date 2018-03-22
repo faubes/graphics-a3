@@ -150,10 +150,17 @@ GLuint g_sphere_ebo;
 GLuint g_sphere_vao;
 //GLuint g_torus_ebo;
 //GLuint g_torus_vao;
-GLuint g_program;
 
-Transformations g_tfm;
-Attributes g_attrib;
+// load both LAFORTUNE and BLINNPHONG programs
+// so we can switch between
+#define NUM_PROGRAMS 2
+GLuint g_program[NUM_PROGRAMS];
+int g_programIndex = 0; // default is 0 for blinn_phong
+
+Transformations g_tfm[NUM_PROGRAMS];
+
+Attributes g_attrib[NUM_PROGRAMS];
+
 WindowSize g_winSize;
 
 LightArray g_lightArray;
@@ -199,14 +206,6 @@ void initMaterial() {
         mat.d_shininess = 8;
         g_matArray.append( mat );
 
-        /*Material
-           c d
-           c s
-           n         */
-        //Blue rubber
-        //0.0425 0.0698 0.0957
-        //0.00533 0.00471 0.00333
-        //43.6
         // material 4 - blue rubber
         mat.d_ambient = glm::vec4(0.0f);
         mat.d_diffuse = glm::vec4(0.0425f, 0.0698f, 0.0957f, 1.0f);
@@ -214,10 +213,6 @@ void initMaterial() {
         mat.d_shininess = 43.6f;
         g_matArray.append( mat);
 
-        //Brass
-        //0.0382 0.0272 0.0119
-        //0.0367 0.015 0.00537
-        //3.16e+004
         // material 5 - Brass
         mat.d_ambient = glm::vec4(0.0f);
         mat.d_diffuse = glm::vec4(0.0382f, 0.0272f, 0.0119f, 1.0f);
@@ -225,10 +220,6 @@ void initMaterial() {
         mat.d_shininess = 3.16e+004;
         g_matArray.append( mat);
 
-        //Metallic-silver
-        //0.0695 0.0628 0.0446
-        //0.0742 0.0615 0.0412
-        // 75
         // material 6 -- metal
         mat.d_ambient = glm::vec4(0.0f);
         mat.d_diffuse = glm::vec4(0.0695f, 0.0628f, 0.0446f, 1.0f);
@@ -264,8 +255,6 @@ void initMaterial() {
         mat.d_Kxy = -0.587f;
         mat.d_Kz = 0.559f;
         g_matArray.append( mat);
-
-
         return;
 }
 
@@ -299,8 +288,8 @@ void initLight() {
                 (GLfloat)1.0f, //a1
                 (GLfloat)0.0f, //a2 attenuation constants
                 (GLfloat)0.0f, //a3
-                glm::vec4(-cos(g_lightAngle)*g_winSize.d_width,
-                          sin(g_lightAngle)*g_winSize.d_width,
+                glm::vec4(-1.0,
+                          1.0,
                           0.0f, // * static_cast<GLfloat>( !light.d_local ),
                           0.0)); // z=0 for direction light
 
@@ -348,109 +337,6 @@ void init(void)
         initLight();
         initMaterial();
 
-        // Load shaders
-        vector<GLuint> sHandles;
-        GLuint handle;
-        Shader objectShader;
-        switch (g_lightModel) {
-        case LAFORTUNE:
-                if (!objectShader.load("../lafortune.vs", GL_VERTEX_SHADER)) {
-                        objectShader.installShader(handle, GL_VERTEX_SHADER);
-                        Shader::compile(handle);
-                        sHandles.push_back(handle);
-                }
-                if (!objectShader.load("../lafortune.fs", GL_FRAGMENT_SHADER)) {
-                        objectShader.installShader(handle, GL_FRAGMENT_SHADER);
-                        Shader::compile(handle);
-                        sHandles.push_back(handle);
-                }
-                break;
-        case BLINN_PHONG:
-        default:
-                if (!objectShader.load("../blinnphong.vs", GL_VERTEX_SHADER)) {
-                        objectShader.installShader(handle, GL_VERTEX_SHADER);
-                        Shader::compile(handle);
-                        sHandles.push_back(handle);
-                }
-                if (!objectShader.load("../blinnphong.fs", GL_FRAGMENT_SHADER)) {
-                        objectShader.installShader(handle, GL_FRAGMENT_SHADER);
-                        Shader::compile(handle);
-                        sHandles.push_back(handle);
-                }
-                break;
-        }
-        cerr << "No of handles: " << sHandles.size() << endl;
-        Shader::installProgram(sHandles, g_program);
-        errorOut();
-
-        // find the locations of uniforms and attributes. Store them in a
-        // global structure for later access
-
-        // Activate program in order to be able to get uniform and attribute locations
-        glUseProgram(g_program);
-        errorOut();
-        // vertex attributes
-        g_attrib.locPos = glGetAttribLocation(g_program, "position");
-        g_attrib.locNorm = glGetAttribLocation(g_program, "normal");
-        g_attrib.locColor = glGetAttribLocation(g_program, "color");
-        // transform uniforms and attributes
-        g_tfm.locMM = glGetAttribLocation( g_program, "ModelMatrix");
-        g_tfm.locVM = glGetUniformLocation( g_program, "ViewMatrix");
-        g_tfm.locP = glGetUniformLocation( g_program, "ProjectionMatrix");
-        errorOut();
-
-        // Generate a VAO
-        glGenVertexArrays(1, &g_sphere_vao );
-        glBindVertexArray( g_sphere_vao );
-
-        // Element array buffer object
-        glGenBuffers(1, &g_sphere_ebo);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, g_sphere_ebo);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                     sizeof(GLushort) * g_sphereShape.getNIndices(),
-                     g_sphereShape.getIndicies(), GL_STATIC_DRAW);
-        errorOut();
-
-        GLuint vbo;
-        glGenBuffers( 1, &vbo );
-        errorOut();
-        glBindBuffer(GL_ARRAY_BUFFER, vbo );
-        glBufferData(GL_ARRAY_BUFFER,
-                     sizeof(GLfloat) * g_sphereShape.getNPoints(),
-                     g_sphereShape.getVertices(), GL_STATIC_DRAW);
-        // pointer into the array of vertices which is now in the VAO
-        glVertexAttribPointer(g_attrib.locPos, 3, GL_FLOAT, GL_FALSE, 0, 0 );
-        glEnableVertexAttribArray(g_attrib.locPos);
-        errorOut();
-
-        // Normal buffer
-        if ( g_attrib.locNorm >= 0 ) { // May be optimized away if not used in vertex shader
-                GLuint nbo;
-                glGenBuffers( 1, &nbo );
-                errorOut();
-                glBindBuffer(GL_ARRAY_BUFFER, nbo );
-                glBufferData(GL_ARRAY_BUFFER,
-                             sizeof(GLfloat) * g_sphereShape.getNPoints(),
-                             g_sphereShape.getNormals(), GL_STATIC_DRAW);
-                // pointer into the array of vertices which is now in the VAO
-                glVertexAttribPointer(g_attrib.locNorm, 3, GL_FLOAT, GL_FALSE, 0, 0 );
-                glEnableVertexAttribArray(g_attrib.locNorm);
-                errorOut();
-        }
-        // Color buffer
-        if ( g_attrib.locColor >= 0 ) {
-                g_sphereShape.updateColors(g_numSpheres); // ensure that we have enough colors
-                GLuint cbo;
-                glGenBuffers(1, &cbo);
-                glBindBuffer(GL_ARRAY_BUFFER, cbo);
-                glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 4 * g_sphereShape.getNColors(),
-                             g_sphereShape.d_colors, GL_DYNAMIC_DRAW);
-                glVertexAttribPointer(g_attrib.locColor, 4, GL_FLOAT, GL_FALSE, 0, 0);
-                glEnableVertexAttribArray(g_attrib.locColor);
-                // Ensure the colors are used per instance and not for each vertex
-                glVertexAttribDivisor(g_attrib.locColor, 1);
-                errorOut();
-        }
         // ensure that we have enough transforms
         g_sphereShape.updateTransforms(g_numSpheres,
                                        glm::vec3(-g_winSize.d_width/2.0f,
@@ -459,62 +345,173 @@ void init(void)
                                        glm::vec3( g_winSize.d_width/2.0f,
                                                   g_winSize.d_height/2.0f,
                                                   (g_winSize.d_far - g_winSize.d_near)/2.0f));
-        // Matrix attribute
-        if ( g_tfm.locMM >= 0 ) {
-                GLuint mmbo;
-                glGenBuffers(1, &mmbo);
-                glBindBuffer(GL_ARRAY_BUFFER, mmbo);
-                glBufferData(GL_ARRAY_BUFFER, sizeof(glm::mat4) * g_sphereShape.getNTransforms(),
-                             g_sphereShape.d_tfms, GL_DYNAMIC_DRAW);
-                // Need to set each column separately.
-                for (int i = 0; i < 4; ++i) {
-                        // Set up the vertex attribute
-                        glVertexAttribPointer(g_tfm.locMM + i, // Location
-                                              4, GL_FLOAT, GL_FALSE, // Column with four floats
-                                              sizeof(glm::mat4), // Stride for next matrix
-                                              (void *)(sizeof(GLfloat) * 4 * i)); // Offset for ith column
-                        glEnableVertexAttribArray(g_tfm.locMM + i);
-                        // Matrix per instance
-                        glVertexAttribDivisor(g_tfm.locMM  + i, 1);
+
+        // for all NUM_PROGRAMS
+        for (int i=0; i < NUM_PROGRAMS; ++i) {
+
+                // Load shaders
+                vector<GLuint> sHandles;
+                GLuint handle;
+                Shader objectShader;
+                switch (static_cast<lightModel>(i)) {
+                case LAFORTUNE:
+                        if (!objectShader.load("../lafortune.vs", GL_VERTEX_SHADER)) {
+                                objectShader.installShader(handle, GL_VERTEX_SHADER);
+                                Shader::compile(handle);
+                                sHandles.push_back(handle);
+                        }
+                        if (!objectShader.load("../lafortune.fs", GL_FRAGMENT_SHADER)) {
+                                objectShader.installShader(handle, GL_FRAGMENT_SHADER);
+                                Shader::compile(handle);
+                                sHandles.push_back(handle);
+                        }
+                        break;
+                case BLINN_PHONG:
+                default:
+                        if (!objectShader.load("../blinnphong.vs", GL_VERTEX_SHADER)) {
+                                objectShader.installShader(handle, GL_VERTEX_SHADER);
+                                Shader::compile(handle);
+                                sHandles.push_back(handle);
+                        }
+                        if (!objectShader.load("../blinnphong.fs", GL_FRAGMENT_SHADER)) {
+                                objectShader.installShader(handle, GL_FRAGMENT_SHADER);
+                                Shader::compile(handle);
+                                sHandles.push_back(handle);
+                        }
+                        break;
+                }
+                cerr << "No of handles: " << sHandles.size() << endl;
+                Shader::installProgram(sHandles, g_program[i]);
+                errorOut();
+
+                // find the locations of uniforms and attributes. Store them in a
+                // global structure for later access
+
+                // Activate program in order to be able to get uniform and attribute locations
+                glUseProgram(g_program[i]);
+                errorOut();
+                // vertex attributes
+                g_attrib[i].locPos = glGetAttribLocation(g_program[i], "position");
+                g_attrib[i].locNorm = glGetAttribLocation(g_program[i], "normal");
+                g_attrib[i].locColor = glGetAttribLocation(g_program[i], "color");
+                // transform uniforms and attributes
+                g_tfm[i].locMM = glGetAttribLocation( g_program[i], "ModelMatrix");
+                g_tfm[i].locVM = glGetUniformLocation( g_program[i], "ViewMatrix");
+                g_tfm[i].locP = glGetUniformLocation( g_program[i], "ProjectionMatrix");
+                errorOut();
+
+                // Generate a VAO
+                glGenVertexArrays(1, &g_sphere_vao );
+                glBindVertexArray( g_sphere_vao );
+
+                // Element array buffer object
+                glGenBuffers(1, &g_sphere_ebo);
+                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, g_sphere_ebo);
+                glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+                             sizeof(GLushort) * g_sphereShape.getNIndices(),
+                             g_sphereShape.getIndicies(), GL_STATIC_DRAW);
+                errorOut();
+
+                GLuint vbo;
+                glGenBuffers( 1, &vbo );
+                errorOut();
+                glBindBuffer(GL_ARRAY_BUFFER, vbo );
+                glBufferData(GL_ARRAY_BUFFER,
+                             sizeof(GLfloat) * g_sphereShape.getNPoints(),
+                             g_sphereShape.getVertices(), GL_STATIC_DRAW);
+                // pointer into the array of vertices which is now in the VAO
+                glVertexAttribPointer(g_attrib[i].locPos, 3, GL_FLOAT, GL_FALSE, 0, 0 );
+                glEnableVertexAttribArray(g_attrib[i].locPos);
+                errorOut();
+
+                // Normal buffer
+                if ( g_attrib[i].locNorm >= 0 ) { // May be optimized away if not used in vertex shader
+                        GLuint nbo;
+                        glGenBuffers( 1, &nbo );
+                        errorOut();
+                        glBindBuffer(GL_ARRAY_BUFFER, nbo );
+                        glBufferData(GL_ARRAY_BUFFER,
+                                     sizeof(GLfloat) * g_sphereShape.getNPoints(),
+                                     g_sphereShape.getNormals(), GL_STATIC_DRAW);
+                        // pointer into the array of vertices which is now in the VAO
+                        glVertexAttribPointer(g_attrib[i].locNorm, 3, GL_FLOAT, GL_FALSE, 0, 0 );
+                        glEnableVertexAttribArray(g_attrib[i].locNorm);
+                        errorOut();
+                }
+                // Color buffer
+                if ( g_attrib[i].locColor >= 0 ) {
+                        g_sphereShape.updateColors(g_numSpheres); // ensure that we have enough colors
+                        GLuint cbo;
+                        glGenBuffers(1, &cbo);
+                        glBindBuffer(GL_ARRAY_BUFFER, cbo);
+                        glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 4 * g_sphereShape.getNColors(),
+                                     g_sphereShape.d_colors, GL_DYNAMIC_DRAW);
+                        glVertexAttribPointer(g_attrib[i].locColor, 4, GL_FLOAT, GL_FALSE, 0, 0);
+                        glEnableVertexAttribArray(g_attrib[i].locColor);
+                        // Ensure the colors are used per instance and not for each vertex
+                        glVertexAttribDivisor(g_attrib[i].locColor, 1);
+                        errorOut();
+                }
+
+                // Matrix attribute
+                if ( g_tfm[i].locMM >= 0 ) {
+                        GLuint mmbo;
+                        glGenBuffers(1, &mmbo);
+                        glBindBuffer(GL_ARRAY_BUFFER, mmbo);
+                        glBufferData(GL_ARRAY_BUFFER, sizeof(glm::mat4) * g_sphereShape.getNTransforms(),
+                                     g_sphereShape.d_tfms, GL_DYNAMIC_DRAW);
+                        // Need to set each column separately.
+                        for (int j = 0; j < 4; ++j) {
+                                // Set up the vertex attribute
+                                glVertexAttribPointer(g_tfm[i].locMM + j, // Location
+                                                      4, GL_FLOAT, GL_FALSE, // Column with four floats
+                                                      sizeof(glm::mat4), // Stride for next matrix
+                                                      (void *)(sizeof(GLfloat) * 4 * j)); // Offset for ith column
+                                glEnableVertexAttribArray(g_tfm[i].locMM + j);
+                                // Matrix per instance
+                                glVertexAttribDivisor(g_tfm[i].locMM  + j, 1);
+                        }
+                        errorOut();
+                }
+
+                // Light source uniforms
+                g_lightArray.setLights(g_program[i]);
+                errorOut();
+                g_lightArray.setNLights(g_program[i]);
+                errorOut();
+
+                // material uniforms
+                // Generate an uniform buffer object
+                GLuint ubo;
+                glGenBuffers(1, &ubo);
+                glBindBuffer(GL_UNIFORM_BUFFER, ubo);
+                // reserve the memory
+                glBufferData(GL_UNIFORM_BUFFER, g_matArray.getSize(), 0,
+                             GL_STATIC_DRAW );
+                // copy the data to OpenGL
+                g_matArray.setMaterialsUBO(ubo);
+                errorOut();
+                // Now link the buffer object to the material uniform block
+                GLuint bI = glGetUniformBlockIndex(g_program[i], "MaterialBlock" );
+                if ( bI >= 0 ) {
+                        glUniformBlockBinding( g_program[i], bI, 0);
+                        glBindBufferBase(GL_UNIFORM_BUFFER, 0, ubo);
                 }
                 errorOut();
-        }
-        // Light source uniforms
-        g_lightArray.setLights(g_program);
-        errorOut();
-        // Could use material uniforms
-#ifdef UNIFORM
-        g_matArray.setMaterials(g_program);
-        errorOut();
 
-#else
-        // or an uniform buffer object
-        // Generate an uniform buffer object
-        GLuint ubo;
-        glGenBuffers(1, &ubo);
-        glBindBuffer(GL_UNIFORM_BUFFER, ubo);
-        // reserve the memory
-        glBufferData(GL_UNIFORM_BUFFER, g_matArray.getSize(), 0,
-                     GL_STATIC_DRAW );
-        // copy the data to OpenGL
-        g_matArray.setMaterialsUBO(ubo);
-        errorOut();
-        // Now link the buffer object to the material uniform block
-        GLuint bI = glGetUniformBlockIndex(g_program, "MaterialBlock" );
-        if ( bI >= 0 ) {
-                glUniformBlockBinding( g_program, bI, 0);
-                glBindBufferBase(GL_UNIFORM_BUFFER, 0, ubo);
-        }
-        errorOut();
-#endif
+                // set the projection matrix with a uniform
+                glm::mat4 Projection =
+                        glm::ortho( -g_winSize.d_width/2.0f, g_winSize.d_width/2.0f,
+                                    -g_winSize.d_height/2.0f, g_winSize.d_height/2.0f,
+                                    g_winSize.d_near, g_winSize.d_far );
 
-        // set the projection matrix with a uniform
-        glm::mat4 Projection =
-                glm::ortho( -g_winSize.d_width/2.0f, g_winSize.d_width/2.0f,
-                            -g_winSize.d_height/2.0f, g_winSize.d_height/2.0f,
-                            g_winSize.d_near, g_winSize.d_far );
-        glUniformMatrix4fv(g_tfm.locP, 1, GL_FALSE, glm::value_ptr(Projection));
-        errorOut();
+                glUniformMatrix4fv(g_tfm[i].locP, 1, GL_FALSE, glm::value_ptr(Projection));
+                errorOut();
+
+
+        }
+
+        glUseProgram(g_program[g_programIndex]); // start  with blinnphong?
 }
 
 
@@ -522,11 +519,10 @@ void display(void)
 {
         glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
-
+        // update light positions to control movement
         for (int i = 0; i < g_lightArray.size(); ++i) {
-                g_lightArray.setPosition(g_program, i);
+                g_lightArray.setPosition(g_program[g_programIndex], i);
         }
-        g_lightArray.setNLights(g_program);
 
         // Instead of moving the coordinate system into the scene,
         // use lookAt -- use the center of the viewing volume as the reference coordinates
@@ -535,7 +531,7 @@ void display(void)
                              glm::vec3(0, 0, 0), // at is the center of the cube
                              glm::vec3(0, 1.0f, 0 )); // y is up
         // Update uniform for this drawing
-        glUniformMatrix4fv(g_tfm.locVM, 1, GL_FALSE, glm::value_ptr(ModelView));
+        glUniformMatrix4fv(g_tfm[g_programIndex].locVM, 1, GL_FALSE, glm::value_ptr(ModelView));
         // VAO is still bound - to be clear bind again
         glBindVertexArray(g_sphere_vao);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, g_sphere_ebo);
@@ -573,7 +569,11 @@ void reshape( GLsizei _width, GLsizei _height ) {
                                          -g_winSize.d_height/2.0f, g_winSize.d_height/2.0f,
                                          g_winSize.d_near, g_winSize.d_far );
         }
-        glUniformMatrix4fv(g_tfm.locP, 1, GL_FALSE, glm::value_ptr(Projection));
+        // change projection for both programs
+        for (int i=0; i< NUM_PROGRAMS; ++i) {
+          glUniformMatrix4fv(g_tfm[i].locP, 1, GL_FALSE, glm::value_ptr(Projection));
+        }
+
         g_winSize.d_widthPixel = _width;
         g_winSize.d_heightPixel = _height;
         // reshape our viewport
@@ -602,7 +602,7 @@ void keyboard (unsigned char key, int x, int y)
                 light = g_lightArray.get( g_cLight );
                 light.d_enabled = !light.d_enabled;
                 g_lightArray.set( g_cLight, light );
-                g_lightArray.setLight(g_program, g_cLight );
+                g_lightArray.setLight(g_program[g_programIndex], g_cLight );
                 cerr << "Light " << g_cLight << " is "<< light.d_enabled << endl;
                 break;
         // controls light 0 pos vec
@@ -651,33 +651,33 @@ void keyboard (unsigned char key, int x, int y)
                 light = g_lightArray.get( g_cLight );
                 light.d_ambient = glm::vec4( 1.0f, 1.0f, 1.0f, 1.0f);
                 g_lightArray.set( g_cLight, light );
-                g_lightArray.setLight(g_program, g_cLight );
+                g_lightArray.setLight(g_program[g_programIndex], g_cLight );
                 cerr << "Light " << g_cLight << " ambient on." << endl;
                 break;
         case 'a':
                 light = g_lightArray.get( g_cLight );
                 light.d_ambient = glm::vec4( 0.0f, 0.0f, 0.0f, 1.0f);
                 g_lightArray.set( g_cLight, light );
-                g_lightArray.setLight(g_program, g_cLight );
+                g_lightArray.setLight(g_program[g_programIndex], g_cLight );
                 cerr << "Light " << g_cLight << " ambient off." << endl;
                 break;
         // directional/point light
         case 'D':
                 light = g_lightArray.get( g_cLight );
                 light.d_local = false;
-                g_lightArray.set( g_cLight, light );
-                g_lightArray.setLight(g_program, g_cLight );
                 light.d_position.w = 0.0f; // flag needed in vertex shader
-                g_lightArray.setPosition(g_program, g_cLight );
+                g_lightArray.set( g_cLight, light );
+                g_lightArray.setLight(g_program[g_programIndex], g_cLight );
+                g_lightArray.setPosition(g_program[g_programIndex], g_cLight );
                 cerr << "Toggle light " << g_cLight << " pointLight off." << endl;
                 break;
         case 'd':
                 light = g_lightArray.get( g_cLight );
                 light.d_local = true;
-                g_lightArray.set( g_cLight, light );
-                g_lightArray.setLight(g_program, g_cLight );
                 light.d_position.w = 1.0f; // flag needed in vertex shader
-                g_lightArray.setPosition(g_program, g_cLight );
+                g_lightArray.set( g_cLight, light );
+                g_lightArray.setLight(g_program[g_programIndex], g_cLight );
+                g_lightArray.setPosition(g_program[g_programIndex], g_cLight );
                 cerr << "Toggle light " << g_cLight << " pointLight on." << endl;
                 break;
         // spot light on/off
@@ -689,7 +689,7 @@ void keyboard (unsigned char key, int x, int y)
                 g_control.d_spot = true;
                 g_control.d_attenuation = false;
                 g_lightArray.set( g_cLight, light );
-                g_lightArray.setLight(g_program, g_cLight );
+                g_lightArray.setLight(g_program[g_programIndex], g_cLight );
                 cerr << "SpotLight on with params: "
                      << g_cLight << " spot exponent: " << light.d_spot_exponent
                      << " cutoff " << light.d_spot_cutoff << endl;
@@ -700,7 +700,7 @@ void keyboard (unsigned char key, int x, int y)
                 light.d_spot_cutoff = 180.0f;
                 g_control.d_spot = false;
                 g_lightArray.set( g_cLight, light );
-                g_lightArray.setLight(g_program, g_cLight );
+                g_lightArray.setLight(g_program[g_programIndex], g_cLight );
                 cerr << "SpotLight off." << endl;
                 break;
         // attenuation on/off
@@ -712,7 +712,7 @@ void keyboard (unsigned char key, int x, int y)
                 g_control.d_attenuation = true;
                 g_control.d_spot = false;
                 g_lightArray.set( g_cLight, light );
-                g_lightArray.setLight(g_program, g_cLight );
+                g_lightArray.setLight(g_program[g_programIndex], g_cLight );
                 cerr << "Light: " << g_cLight << " attenuation on.";
                 cerr << " " << light.d_constant_attenuation
                      << " " << light.d_linear_attenuation
@@ -725,7 +725,7 @@ void keyboard (unsigned char key, int x, int y)
                 light.d_quadratic_attenuation = 0.0f;
                 g_control.d_attenuation = false;
                 g_lightArray.set( g_cLight, light );
-                g_lightArray.setLight(g_program, g_cLight );
+                g_lightArray.setLight(g_program[g_programIndex], g_cLight );
                 cerr << "Light: " << g_cLight << " attenuation off.";
                 cerr << " " << light.d_constant_attenuation
                      << " " << light.d_linear_attenuation
@@ -737,13 +737,17 @@ void keyboard (unsigned char key, int x, int y)
 //        lightModel g_lightModel = BLINN_PHONG;
                 if (g_lightModel != BLINN_PHONG) {
                         g_lightModel = BLINN_PHONG;
-                        init();
+                        g_programIndex = 0;
+                        reshape( g_winSize.d_widthPixel, g_winSize.d_heightPixel );
+                        glUseProgram(g_program[g_programIndex]);
                 }
                 break;
         case 'B':
                 if (g_lightModel != LAFORTUNE) {
                         g_lightModel = LAFORTUNE;
-                        init();
+                        g_programIndex = 1;
+                        reshape( g_winSize.d_widthPixel, g_winSize.d_heightPixel );
+                        glUseProgram(g_program[g_programIndex]);
                 }
                 break;
 
@@ -768,6 +772,7 @@ void keyboard (unsigned char key, int x, int y)
         }
         glutPostRedisplay();
 }
+}
 
 void specialkeys( int key, int x, int y )
 {
@@ -791,7 +796,7 @@ void specialkeys( int key, int x, int y )
                              << " quadratic: " << light.d_quadratic_attenuation << endl;
                 }
                 g_lightArray.set( g_cLight, light );
-                g_lightArray.setLight(g_program, g_cLight );
+                g_lightArray.setLight(g_program[g_programIndex], g_cLight );
                 break;
         case GLUT_KEY_RIGHT:
                 light = g_lightArray.get( g_cLight );
@@ -810,7 +815,7 @@ void specialkeys( int key, int x, int y )
                              << " quadratic: " << light.d_quadratic_attenuation << endl;
                 }
                 g_lightArray.set( g_cLight, light );
-                g_lightArray.setLight(g_program, g_cLight );
+                g_lightArray.setLight(g_program[g_programIndex], g_cLight );
                 break;
         case GLUT_KEY_UP:
                 light = g_lightArray.get( g_cLight );
@@ -833,7 +838,7 @@ void specialkeys( int key, int x, int y )
                              << " quadratic: " << light.d_quadratic_attenuation << endl;
                 }
                 g_lightArray.set( g_cLight, light );
-                g_lightArray.setLight(g_program, g_cLight );
+                g_lightArray.setLight(g_program[g_programIndex], g_cLight );
                 break;
         case GLUT_KEY_DOWN:
                 light = g_lightArray.get( g_cLight );
@@ -857,7 +862,7 @@ void specialkeys( int key, int x, int y )
                              << " quadratic: " << light.d_quadratic_attenuation << endl;
                 }
                 g_lightArray.set( g_cLight, light );
-                g_lightArray.setLight(g_program, g_cLight );
+                g_lightArray.setLight(g_program[g_programIndex], g_cLight );
                 break;
         case GLUT_KEY_PAGE_UP:
                 g_winSize.d_height += 0.2f;
@@ -874,7 +879,6 @@ void specialkeys( int key, int x, int y )
         glutPostRedisplay();
 }
 
-}
 
 int main(int argc, char** argv) {
   #ifdef JOELAPTOP

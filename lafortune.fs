@@ -176,5 +176,5 @@ void main() {
 
   color =  min(scatteredLight + reflectedLight, vec4(1.0)); // add material transparency?
   // color = colorVertFrag;
-  // color = vec4(LVec,1.0);
+  //color = vec4(1.0);
 }
