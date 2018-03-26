@@ -69,8 +69,8 @@ Material() : d_emissive(0.0, 0.0, 0.0, 1.0),
     d_diffuse( 0.8f, 0.8f, 0.8f, 1.0f ),
     d_specular( 0.0f, 0.0f, 0.0f, 1.0f ),
     d_shininess( 1.0f ),
-    d_Kxy(-0.5f),
-    d_Kz(0.5f) {}
+    d_Kxy(1.0f),
+    d_Kz(1.0f) {}
 };
 
 

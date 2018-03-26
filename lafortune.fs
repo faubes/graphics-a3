@@ -43,8 +43,8 @@
 #version 330 core
 // following example from https://computergraphics.stackexchange.com/questions/5323/dynamic-array-in-glsl
 #define MAX_LIGHTS 5
+#define MAX_MATERIALS 15
 #define M_PI 3.1415926535897932384626433832795
-
 in vec4 colorVertFrag;
 in vec3 normalFrag;
 in vec3 eyeFrag;
@@ -65,7 +65,7 @@ struct Material {
 };
 
 layout (std140) uniform MaterialBlock {
-  uniform Material materials[4];
+  uniform Material materials[MAX_MATERIALS];
 };
 
 
@@ -92,7 +92,7 @@ uniform LightSource lights[MAX_LIGHTS];
 uniform int nLights;
 
 void main() {
-  int mI = materialId % 3 + 7; // use only new materials
+  int mI = (materialId % 3) + 7; // use only new materials
   vec3 NVec = normalize(normalFrag);
   vec3 EVec = normalize(eyeFrag);
   vec4 scatteredLight = vec4(0.0);
@@ -141,8 +141,9 @@ void main() {
            float n = materials[mI].shininess;
            float specular = (Kxy * (LVec.x * EVec.x + LVec.y * EVec.y) + Kz * LVec.z * EVec.z);
            specular = pow(specular, n);
+
            float maxK = max(abs(Kxy), abs(Kz));
-           maxK = pow(maxK, n);
+           //maxK = pow(maxK, n);
            specular *= (n+2) / (2*M_PI*maxK);
 
       // scattered light

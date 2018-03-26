@@ -162,6 +162,7 @@ Transformations g_tfm[NUM_PROGRAMS];
 Attributes g_attrib[NUM_PROGRAMS];
 
 WindowSize g_winSize;
+void reshape( GLsizei _width, GLsizei _height );
 
 LightArray g_lightArray;
 MaterialArray g_matArray;
@@ -228,7 +229,7 @@ void initMaterial() {
         g_matArray.append( mat);
 
         // Lafortune materials
-        //Blue rubber
+        //Blue rubber 7
         mat.d_ambient = glm::vec4(0.0f);
         mat.d_diffuse = glm::vec4(0.0464f, 0.0736f, 0.0986f, 1.0f);
         mat.d_specular = glm::vec4(0.291f, 0.239f, 0.159f, 1.0f);
@@ -237,7 +238,7 @@ void initMaterial() {
         mat.d_Kz = 0.44f;
         g_matArray.append( mat);
 
-        //Brass
+        //Brass 8
         mat.d_ambient = glm::vec4(0.0f);
         mat.d_diffuse = glm::vec4(0.0387f, 0.0273f, 0.0123f, 1.0f);
         mat.d_specular = glm::vec4(0.118f, 0.0479f, 0.0172f, 1.0f);
@@ -246,8 +247,7 @@ void initMaterial() {
         mat.d_Kz = 0.577f;
         g_matArray.append( mat);
 
-        //Metallic-silver
-
+        //Metallic-silver 9
         mat.d_ambient = glm::vec4(0.0f);
         mat.d_diffuse = glm::vec4(0.0552f, 0.05f, 0.0359f, 1.0f);
         mat.d_specular = glm::vec4(0.434f, 0.363f, 0.243f, 1.0f);
@@ -332,7 +332,6 @@ void init(void)
                 cerr << "No OpenGL 3.3 or higher" <<endl;
                 exit(-1);
         }
-
         // init lights and material in our global arrays
         initLight();
         initMaterial();
@@ -355,6 +354,7 @@ void init(void)
                 Shader objectShader;
                 switch (static_cast<lightModel>(i)) {
                 case LAFORTUNE:
+                cerr << "loading lafortune shaders" << endl;
                         if (!objectShader.load("../lafortune.vs", GL_VERTEX_SHADER)) {
                                 objectShader.installShader(handle, GL_VERTEX_SHADER);
                                 Shader::compile(handle);
@@ -368,6 +368,7 @@ void init(void)
                         break;
                 case BLINN_PHONG:
                 default:
+                cerr << "loading blinnphong shaders" << endl;
                         if (!objectShader.load("../blinnphong.vs", GL_VERTEX_SHADER)) {
                                 objectShader.installShader(handle, GL_VERTEX_SHADER);
                                 Shader::compile(handle);
@@ -397,7 +398,10 @@ void init(void)
                 // transform uniforms and attributes
                 g_tfm[i].locMM = glGetAttribLocation( g_program[i], "ModelMatrix");
                 g_tfm[i].locVM = glGetUniformLocation( g_program[i], "ViewMatrix");
+                cerr << "g_tfm[" << i << "].locVM = " << g_tfm[i].locVM << endl;
+
                 g_tfm[i].locP = glGetUniformLocation( g_program[i], "ProjectionMatrix");
+                cerr << "g_tfm[" << i << "].locP = " << g_tfm[i].locP << endl;
                 errorOut();
 
                 // Generate a VAO
@@ -501,6 +505,7 @@ void init(void)
 
                 // set the projection matrix with a uniform
                 glm::mat4 Projection =
+
                         glm::ortho( -g_winSize.d_width/2.0f, g_winSize.d_width/2.0f,
                                     -g_winSize.d_height/2.0f, g_winSize.d_height/2.0f,
                                     g_winSize.d_near, g_winSize.d_far );
@@ -508,10 +513,9 @@ void init(void)
                 glUniformMatrix4fv(g_tfm[i].locP, 1, GL_FALSE, glm::value_ptr(Projection));
                 errorOut();
 
-
         }
-
         glUseProgram(g_program[g_programIndex]); // start  with blinnphong?
+
 }
 
 
@@ -680,6 +684,11 @@ void keyboard (unsigned char key, int x, int y)
                 g_lightArray.setPosition(g_program[g_programIndex], g_cLight );
                 cerr << "Toggle light " << g_cLight << " pointLight on." << endl;
                 break;
+// call reshape
+            case 'r':
+            reshape( g_winSize.d_widthPixel, g_winSize.d_heightPixel );
+            break;
+
         // spot light on/off
         case 'S':
                 light = g_lightArray.get( g_cLight );
@@ -738,16 +747,16 @@ void keyboard (unsigned char key, int x, int y)
                 if (g_lightModel != BLINN_PHONG) {
                         g_lightModel = BLINN_PHONG;
                         g_programIndex = 0;
-                        reshape( g_winSize.d_widthPixel, g_winSize.d_heightPixel );
                         glUseProgram(g_program[g_programIndex]);
+                        reshape( g_winSize.d_widthPixel, g_winSize.d_heightPixel );
                 }
                 break;
         case 'B':
                 if (g_lightModel != LAFORTUNE) {
                         g_lightModel = LAFORTUNE;
                         g_programIndex = 1;
-                        reshape( g_winSize.d_widthPixel, g_winSize.d_heightPixel );
                         glUseProgram(g_program[g_programIndex]);
+                        reshape( g_winSize.d_widthPixel, g_winSize.d_heightPixel );
                 }
                 break;
 
